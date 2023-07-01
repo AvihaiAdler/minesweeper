@@ -8,6 +8,7 @@ target_sources(minesweeper PRIVATE
   src/util.c
   src/board.c
   src/panel.c
+  src/window.c
 )
 
 target_compile_features(minesweeper PRIVATE c_std_99)
