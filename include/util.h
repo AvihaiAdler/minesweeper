@@ -5,36 +5,17 @@
 #include "board.h"
 #include "game_properties.h"
 #include "panel.h"
-#include "tigr.h"
+#include "window.h"
 
-struct window {
-  Tigr *bmp;
+struct window;
 
-  size_t panels_amount;
-  struct panel *panels[];
-};
+size_t cell_row(int y, int y_begin, size_t spacing, size_t cell_size, size_t offset);
 
-struct game {
-  struct game_clock {
-    time_t start;
-    time_t end;
-  } game_clock;
+size_t cell_col(int x, int x_begin, size_t spacing, size_t cell_size, size_t offset);
 
-  struct board board;
-  int mines_counter;
+int cell_y_coord(int row, int y_begin, size_t spacing, size_t cell_size, size_t offset);
 
-  enum mouse_event prev_event;
-  enum difficulty difficulty;
-  enum game_state game_state;
-};
-
-struct window *window_create(size_t width, size_t height, char *const title, int flags, size_t panels_amount, ...);
-
-void window_destroy(struct window *window);
-
-void draw_window(struct window *restrict window, struct game *restrict game, enum mouse_event mouse_event);
-
-Tigr *draw_alert(char const *message);
+int cell_x_coord(int col, int x_begin, size_t spacing, size_t cell_size, size_t offset);
 
 void reveal_all_mines(struct board *restrict board);
 
