@@ -1,5 +1,7 @@
 #pragma once
 
+#include "board.h"
+
 enum game_state {
   STATE_INVALID_STATE = 0,
   STATE_LOST,
@@ -7,15 +9,23 @@ enum game_state {
   STATE_PLAYING,
 };
 
-enum game_mode {
-  MODE_BEGINNER,
-  MODE_INTERMEDIATE,
-  MODE_ADVANCED,
-};
-
 enum mouse_event {
   MOUSE_UP,
   MOUSE_DOWN,
+};
+
+struct game {
+  struct game_clock {
+    time_t start;
+    time_t end;
+  } game_clock;
+
+  struct board board;
+  int mines_counter;
+
+  enum mouse_event prev_event;
+  enum difficulty difficulty;
+  enum game_state game_state;
 };
 
 #define ALERT_WIDTH 200
@@ -33,4 +43,5 @@ enum mouse_event {
 #define NAVBAR_END 20
 
 #define CELL_SIZE 20
-#define SPACING 0
+#define CELL_SPACING 0
+#define NAVBAR_SPACING 5
