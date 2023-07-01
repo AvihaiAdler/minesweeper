@@ -18,6 +18,10 @@ The game uses CMake as its build tool. As such one need it to be installed. Curr
 
 #### RoadMap
 
-[ ] add the ability to mark a tile with a question mark
-[ ] add the ability to change difficulty
-[ ] support for windows
+- [ ] add the ability to mark a tile with a question mark
+- [ ] add the ability to change difficulty
+- [ ] support for windows
+
+#### Notes
+
+The pixelart was done by me - feel free to use it should you want to 
