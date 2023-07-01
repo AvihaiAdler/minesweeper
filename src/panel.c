@@ -41,6 +41,26 @@ struct panel *panel_create(int x_begin,
   return panel;
 }
 
+struct panel *panel_expand(struct panel *restrict panel, size_t assets_amount, ...) {
+  if (!panel) return NULL;
+
+  size_t old_assests_amount = panel->assets_amount;
+
+  struct panel *expanded = realloc(panel, sizeof *panel * assets_amount * sizeof *panel->assests);
+  if (!expanded) return panel;
+
+  va_list args;
+  va_start(args, assets_amount);
+
+  for (size_t i = old_assests_amount; i < assets_amount; i++) {
+    expanded->assests[i] = va_arg(args, Tigr *);
+  }
+
+  va_end(args);
+
+  return expanded;
+}
+
 void panel_destroy(struct panel *restrict panel) {
   if (!panel) return;
 
