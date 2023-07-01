@@ -61,9 +61,7 @@ static inline struct cell *get_cell(struct board *restrict board, int x, int y, 
    */
 
   size_t offset = panel->properties.spacing / 2;
-  // size_t i = (y - panel->y_begin - offset) / (panel->properties.cell_size + panel->properties.spacing);
   size_t row = cell_row(y, panel->y_begin, panel->properties.spacing, panel->properties.cell_size, offset);
-  // size_t j = (x - panel->x_begin - offset) / (panel->properties.cell_size + panel->properties.spacing);
   size_t col = cell_col(x, panel->x_begin, panel->properties.spacing, panel->properties.cell_size, offset);
 
   if ((size_t)y > cell_y_coord(row, panel->y_begin, panel->properties.spacing, panel->properties.cell_size, offset) +
@@ -205,7 +203,6 @@ void on_mouse_click(struct window *restrict window, struct game *restrict game, 
       game->board.revealed_cells--;
       current_cell->revealed = false;
       reveal_next_cell(&game->board, row, col, &game->game_state);
-      // game->game_state = reveal_adjacent_cells(&game->board, row, col);
     } else if (LMB(buttons)) {
       if (current_cell->flagged) { return; }
 
