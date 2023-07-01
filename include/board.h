@@ -13,12 +13,12 @@ struct cell {
   size_t adjacent_mines;
 };
 
-// difficulty packed values accross bytes, each value gets its own byte. obviously - the system must have sizeof(int)
-// == 4. col | rows | number of mines
+// difficulty packed values accross bytes, each value gets its own byte.
+// obviously - the system must have sizeof(int) == 4. col | rows | number of mines
 enum difficulty {
   MS_CLASSIC = 9 << OCTET * 2 | 9 << OCTET | 10,
   MS_INTERMEDIATE = 16 << OCTET * 2 | 16 << OCTET | 40,
-  MS_ADVANCED = 30 << OCTET * 2 | 16 << OCTET | 99,
+  MS_EXPERT = 30 << OCTET * 2 | 16 << OCTET | 99,
 };
 
 struct board {
