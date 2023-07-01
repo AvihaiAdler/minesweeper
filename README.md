@@ -4,7 +4,7 @@ An implementation of the old but classic windows minesweeper written in C using 
 
 #### Controls
 
-As expected the game is played with the mouse. Left click to reveal a tile, right click to mark it with a flag and (due to a design choice) the middle mouse button to reveal all tiles within an marked area
+As expected the game is played with the mouse. Left click to reveal a tile, right click to mark it with a flag and (due to a design choice) the middle mouse button to reveal all tiles within a marked area
 
 #### Building an compiling
 
