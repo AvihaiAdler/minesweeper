@@ -45,7 +45,6 @@ struct panel *panel_expand(struct panel *restrict panel, size_t assets_amount, .
   if (!panel) return NULL;
 
   size_t old_assests_amount = panel->assets_amount;
-
   struct panel *expanded = realloc(panel, sizeof *panel * assets_amount * sizeof *panel->assests);
   if (!expanded) return panel;
 
