@@ -14,11 +14,12 @@ struct cell {
 };
 
 // difficulty packed values accross bytes, each value gets its own byte.
-// obviously - the system must have sizeof(int) == 4. col | rows | number of mines
+// obviously - the system must have sizeof(int) == 4. index | col | rows | number of mines
 enum difficulty {
   MS_CLASSIC = 9 << OCTET * 2 | 9 << OCTET | 10,
-  MS_INTERMEDIATE = 16 << OCTET * 2 | 16 << OCTET | 40,
-  MS_EXPERT = 30 << OCTET * 2 | 16 << OCTET | 99,
+  MS_ADVANCED = 1 << OCTET * 3 | 16 << OCTET * 2 | 16 << OCTET | 40,
+  MS_EXPERT = 2 << OCTET * 3 | 30 << OCTET * 2 | 16 << OCTET | 99,
+  MS_DIFFICULTIES = 3,
 };
 
 struct board {
@@ -50,4 +51,4 @@ void board_reveal_cell(struct board *restrict board, size_t row, size_t col);
 
 struct cell *board_get_cell(struct board *restrict board, size_t row, size_t col);
 
-extern enum difficulty difficulties[3];
+extern enum difficulty difficulties[MS_DIFFICULTIES];

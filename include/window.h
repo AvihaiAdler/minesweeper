@@ -19,6 +19,8 @@ struct window {
 
 struct window *window_create(size_t width, size_t height, char *const title, int flags, size_t panels_amount, ...);
 
+void window_resize(struct window *restrict window, size_t width, size_t height, char const *title, int flags);
+
 void window_destroy(struct window *window);
 
 void draw_window(struct window *restrict window, struct game *restrict game, enum mouse_event mouse_event);

@@ -8,11 +8,14 @@ struct panel_properties {
   size_t spacing;
 };
 
+/**
+ * offsets are the _fixed_ offset from the window border. *_begin & *_end changes based on window size
+ */
 struct panel {
-  int x_begin;
-  int x_end;
-  int y_begin;
-  int y_end;
+  unsigned x_begin;
+  unsigned x_end;
+  unsigned y_begin;
+  unsigned y_end;
 
   struct panel_properties properties;
   size_t assets_amount;
@@ -20,10 +23,10 @@ struct panel {
 };
 
 // creates a panel with `assets_amount` assets. expects `assets_amount` of type `char const *`
-struct panel *panel_create(int x_begin,
-                           int x_end,
-                           int y_begin,
-                           int y_end,
+struct panel *panel_create(unsigned x_begin,
+                           unsigned x_end,
+                           unsigned y_begin,
+                           unsigned y_end,
                            struct panel_properties properties,
                            size_t assets_amount,
                            ...);

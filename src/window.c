@@ -35,6 +35,23 @@ struct window *window_create(size_t width, size_t height, char *const title, int
   return window;
 }
 
+void window_resize(struct window *restrict window, size_t width, size_t height, char const *title, int flags) {
+  if (!window) return;
+
+  Tigr *new_bmp = tigrWindow(width, height, title, flags);
+  if (!new_bmp) return;
+
+  // re-calculate the new panels offsets
+  for (size_t i = 0; i < window->panels_amount; i++) {
+    struct panel *current = window->panels[i];
+
+    current->x_end = new_bmp->w - (window->bmp->w - current->x_end);
+    current->y_end = new_bmp->h - (window->bmp->h - current->y_end);
+  }
+  tigrFree(window->bmp);
+  window->bmp = new_bmp;
+}
+
 void window_destroy(struct window *window) {
   if (!window) return;
 
@@ -67,16 +84,16 @@ static inline char *sprintf_wrapper(char *buf, size_t size, char const *fmt, ...
   return buf;
 }
 
-static inline char const *get_difficulty_as_str(enum difficulty difficulty) {
+static inline char const *difficulty_as_str(enum difficulty difficulty) {
   switch (difficulty) {
     case MS_CLASSIC:
       return "classic";
-    case MS_INTERMEDIATE:
-      return "intermediate";
+    case MS_ADVANCED:
+      return "advanced";
     case MS_EXPERT:
       return "expert";
     default:
-      return "cutom";
+      return "custom";
   }
 }
 
@@ -88,40 +105,20 @@ static inline void draw_navbar_panel(Tigr *restrict bmp,
   tigrBlitAlpha(bmp,
                 panel->assests[panel->assets_amount - 1],
                 panel->x_begin,
-                panel->y_begin + panel->assests[panel->assets_amount - 1]->h / 2,
+                (panel->y_end - panel->y_begin) / 2 - panel->assests[panel->assets_amount - 1]->h / 2,
                 0,
                 0,
                 panel->assests[panel->assets_amount - 1]->w,
                 panel->assests[panel->assets_amount - 1]->h,
                 DEFAULT_BLIT_ALPHA);
-
-  Tigr *difficulty_art = NULL;
-
-  // mgic numbers. questionable
-  switch (game->difficulty) {
-    case MS_CLASSIC:
-      difficulty_art = panel->assests[0];
-      break;
-    case MS_INTERMEDIATE:
-      difficulty_art = panel->assests[1];
-      break;
-    case MS_EXPERT:
-      difficulty_art = panel->assests[2];
-      break;
-    default:
-      break;
-  }
-  if (difficulty_art) {
-    tigrBlitAlpha(bmp,
-                  difficulty_art,
-                  panel->x_begin,
-                  panel->y_begin + difficulty_art->h / 2,
-                  0,
-                  0,
-                  difficulty_art->w,
-                  difficulty_art->h,
-                  DEFAULT_BLIT_ALPHA);
-  }
+#ifdef MS_DEBUG
+  tigrRect(bmp,
+           panel->x_begin,
+           panel->y_begin,
+           panel->x_end - panel->x_begin,
+           panel->y_end - panel->y_begin,
+           tigrRGB(RED));
+#endif
 }
 
 static inline Tigr *get_emojii(struct panel const *restrict panel, size_t idx) {
@@ -231,6 +228,15 @@ static inline void draw_top_panel(Tigr *restrict bmp,
   draw_button(bmp, panel, game->game_state, mouse_event);
   draw_timer(bmp, panel, game->game_clock.start, game->game_clock.end);
   draw_mines_count(bmp, panel, game->mines_counter);
+
+#ifdef MS_DEBUG
+  tigrRect(bmp,
+           panel->x_begin,
+           panel->y_begin,
+           panel->x_end - panel->x_begin,
+           panel->y_end - panel->y_begin,
+           tigrRGB(RED));
+#endif
 }
 
 static inline TPixel cell_numeric_color(size_t adjacent_mines) {
@@ -343,7 +349,7 @@ void draw_main_panel(Tigr *restrict bmp, struct panel const *restrict panel, str
                       DEFAULT_BLIT_ALPHA);
 
 // debug
-#ifdef DEBUG
+#ifdef MS_DEBUG
         enum local_str_size { SIZE = 5 };
         char adjacent_mines_as_str[SIZE];
 
@@ -379,6 +385,15 @@ void draw_main_panel(Tigr *restrict bmp, struct panel const *restrict panel, str
       }
     }
   }
+
+#ifdef MS_DEBUG
+  tigrRect(bmp,
+           panel->x_begin,
+           panel->y_begin,
+           panel->x_end - panel->x_begin,
+           panel->y_end - panel->y_begin,
+           tigrRGB(RED));
+#endif
 }
 
 void draw_window(struct window *restrict window, struct game *restrict game, enum mouse_event mouse_event) {

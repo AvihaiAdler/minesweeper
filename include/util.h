@@ -9,6 +9,10 @@
 
 struct window;
 
+size_t calculate_window_width(struct board *restrict board);
+
+size_t calculate_window_height(struct board *restrict board);
+
 size_t cell_row(int y, int y_begin, size_t spacing, size_t cell_size, size_t offset);
 
 size_t cell_col(int x, int x_begin, size_t spacing, size_t cell_size, size_t offset);

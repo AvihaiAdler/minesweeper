@@ -7,6 +7,14 @@
 #define RMB(X) ((X)&2)
 #define MMB(X) ((X)&4)
 
+size_t calculate_window_width(struct board *restrict board) {
+  return (CELL_SIZE + CELL_SPACING) * board_cols(board) + LEFT_MARGIN + RIGHT_MARGIN;
+}
+
+size_t calculate_window_height(struct board *restrict board) {
+  return (CELL_SIZE + CELL_SPACING) * board_rows(board) + BOTTOM_MARGIN + NAVBAR_HEIGHT + TOP_PANEL_HEIGHT;
+}
+
 // get the row of a cell based on its y position
 size_t cell_row(int y, int y_begin, size_t spacing, size_t cell_size, size_t offset) {
   return (y - y_begin - offset) / (cell_size + spacing);
@@ -32,7 +40,10 @@ size_t difficulty_index(enum difficulty difficulty) {
 }
 
 // get the cell at position (x,y) on the panel
-static inline struct cell *get_cell(struct board *restrict board, int x, int y, struct panel const *restrict panel) {
+static inline struct cell *get_cell(struct board *restrict board,
+                                    unsigned x,
+                                    unsigned y,
+                                    struct panel const *restrict panel) {
   if (!board || !panel) return NULL;
 
   if (x < panel->x_begin || x > panel->x_end) return NULL;
@@ -72,17 +83,17 @@ static inline struct cell *get_cell(struct board *restrict board, int x, int y, 
   return board_get_cell(board, row, col);
 }
 
-static inline bool reset_pressed(struct panel const *restrict top, int x, int y, int buttons) {
+static inline bool reset_pressed(struct panel const *restrict top, unsigned x, unsigned y, int buttons) {
   if (!top) return false;
   if (!LMB(buttons)) { return false; }
 
-  int mid_width = top->x_end / 2 - top->x_begin / 2 + top->x_begin;
-  int mid_height = top->y_end / 2 - top->y_begin / 2 + top->y_begin;
-  return x >= mid_width - (int)top->properties.cell_size / 2 && x <= mid_width + (int)top->properties.cell_size / 2 &&
-         y >= mid_height - (int)top->properties.cell_size / 2 && y <= mid_height + (int)top->properties.cell_size / 2;
+  unsigned mid_width = top->x_end / 2 - top->x_begin / 2 + top->x_begin;
+  unsigned mid_height = top->y_end / 2 - top->y_begin / 2 + top->y_begin;
+  return x >= mid_width - top->properties.cell_size / 2 && x <= mid_width + top->properties.cell_size / 2 &&
+         y >= mid_height - top->properties.cell_size / 2 && y <= mid_height + top->properties.cell_size / 2;
 }
 
-int panel_index(int x, int y, struct window *restrict window) {
+int panel_index(unsigned x, unsigned y, struct window *restrict window) {
   for (size_t i = 0; i < window->panels_amount; i++) {
     struct panel *current = window->panels[i];
 
@@ -178,7 +189,7 @@ static inline void reveal_all_cells(struct board *restrict board) {
   }
 }
 
-static inline bool difficulty_pressed(int x, int y, struct panel const *restrict panel) {
+static inline bool difficulty_pressed(unsigned x, unsigned y, struct panel const *restrict panel) {
   return x >= panel->x_begin && x <= panel->x_begin + panel->assests[panel->assets_amount - 1]->w &&
          y >= panel->y_begin + panel->assests[panel->assets_amount - 1]->h / 2 &&
          y <= panel->y_begin + panel->assests[panel->assets_amount - 1]->h +
@@ -197,8 +208,14 @@ void on_mouse_click(struct window *restrict window, struct game *restrict game, 
 
   switch (p_idx) {
     case P_NAVBAR: {
-      enum difficulty new_difficulty = difficulties[(difficulty_index(game->difficulty) + 1) % 3];
+      enum difficulty new_difficulty = difficulties[(difficulty_index(game->board.difficulty) + 1) % MS_DIFFICULTIES];
       game->game_state = init_new_game(game, new_difficulty);
+
+      window_resize(window,
+                    calculate_window_width(&game->board),
+                    calculate_window_height(&game->board),
+                    "minesweeper",
+                    TIGR_FIXED);
 
     } break;
     case P_TOP: {

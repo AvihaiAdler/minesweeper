@@ -5,7 +5,7 @@
 #include "tigr.h"
 #include "util.h"
 
-enum difficulty difficulties[] = {MS_CLASSIC, MS_INTERMEDIATE, MS_EXPERT};
+enum difficulty difficulties[] = {MS_CLASSIC, MS_ADVANCED, MS_EXPERT};
 
 /*generates a random value between [min, max) */
 static inline int rng(int min, int max) {
