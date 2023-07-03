@@ -36,11 +36,11 @@ struct game {
 #define CELL_COLORS 130, 130, 130, 220
 
 // margin
-#define TOP_MARGIN 50
-#define BOTTOM_MARGIN 10
-#define LEFT_MARGIN 10
-#define RIGHT_MARGIN 10
-#define NAVBAR_END 20
+#define BOTTOM_MARGIN 0
+#define LEFT_MARGIN 0
+#define RIGHT_MARGIN 0
+#define NAVBAR_HEIGHT 30
+#define TOP_PANEL_HEIGHT 30
 
 #define CELL_SIZE 20
 #define CELL_SPACING 0

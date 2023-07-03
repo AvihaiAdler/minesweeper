@@ -13,22 +13,22 @@ int main(void) {
   srand((unsigned)time(NULL));
 
   // game vars
-  struct game game = game_create(MS_CLASSIC);
+  struct game game = game_create(MS_ADVANCED);
   // init game
-  if (init_new_game(&game, MS_CLASSIC) == STATE_INVALID_STATE) {
+  if (init_new_game(&game, MS_ADVANCED) == STATE_INVALID_STATE) {
     draw_alert("failed to create a game");
     goto game_cleanup;
   }
 
   // graphics vars
-  size_t window_width = (CELL_SIZE + CELL_SPACING) * board_cols(&game.board) + LEFT_MARGIN + RIGHT_MARGIN;
-  size_t window_height = (CELL_SIZE + CELL_SPACING) * board_rows(&game.board) + TOP_MARGIN + BOTTOM_MARGIN + NAVBAR_END;
+  size_t window_width = calculate_window_width(&game.board);
+  size_t window_height = calculate_window_height(&game.board);
 
   // spacing should be something meaninful should one want to add something to the navbar
   struct panel *p_navbar = panel_create(LEFT_MARGIN,
                                         window_width - RIGHT_MARGIN,
                                         0,
-                                        NAVBAR_END,
+                                        NAVBAR_HEIGHT,
                                         (struct panel_properties){
                                           .cell_size = CELL_SIZE,
                                           .spacing = NAVBAR_SPACING,
@@ -45,8 +45,8 @@ int main(void) {
 
   struct panel *p_top = panel_create(LEFT_MARGIN,
                                      window_width - RIGHT_MARGIN,
-                                     NAVBAR_END,
-                                     TOP_MARGIN + NAVBAR_END,
+                                     NAVBAR_HEIGHT,
+                                     NAVBAR_HEIGHT + TOP_PANEL_HEIGHT,
                                      (struct panel_properties){.cell_size = CELL_SIZE, .spacing = CELL_SPACING},
                                      5,
                                      "assets/em_happy",
@@ -62,7 +62,7 @@ int main(void) {
 
   struct panel *p_main = panel_create(LEFT_MARGIN,
                                       window_width - RIGHT_MARGIN,
-                                      TOP_MARGIN + NAVBAR_END,
+                                      NAVBAR_HEIGHT + TOP_PANEL_HEIGHT,
                                       window_height - BOTTOM_MARGIN,
                                       (struct panel_properties){.cell_size = CELL_SIZE, .spacing = CELL_SPACING},
                                       3,
@@ -78,7 +78,7 @@ int main(void) {
   }
 
   struct window *window =
-    window_create(window_width, window_height, "minesweeper", TIGR_AUTO | TIGR_2X, 3, p_navbar, p_top, p_main);
+    window_create(window_width, window_height, "minesweeper", TIGR_FIXED, 3, p_navbar, p_top, p_main);
   if (!window) {
     tigrError(NULL, "failed to create game window");
     panel_destroy(p_top);

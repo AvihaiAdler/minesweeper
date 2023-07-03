@@ -2,10 +2,10 @@
 #include <stdarg.h>
 #include <stdlib.h>
 
-struct panel *panel_create(int x_begin,
-                           int x_end,
-                           int y_begin,
-                           int y_end,
+struct panel *panel_create(unsigned x_begin,
+                           unsigned x_end,
+                           unsigned y_begin,
+                           unsigned y_end,
                            struct panel_properties properties,
                            size_t assets_amount,
                            ...) {

@@ -12,9 +12,9 @@ The game uses CMake as its build tool. As such one need it to be installed. Curr
 
 - clone the project
 - navigate to the project directory
-- `cmake -S . -B build` (add `-G <generator>`) if you prefer to use anything other than `make`
+- `cmake -S . -B build` (add `-G <generator>` if you prefer to use anything other than `make`)
 - `cmake --build build` to build the project
-- the binary (`minesweeper`) will be located under `build`
+- the binary (`minesweeper`) will be located under `build/`
 
 #### RoadMap
 
