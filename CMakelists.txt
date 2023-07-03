@@ -11,19 +11,27 @@ target_sources(minesweeper PRIVATE
   src/window.c
 )
 
+target_compile_definitions(minesweeper PRIVATE MS_DEBUG)
 target_compile_features(minesweeper PRIVATE c_std_99)
-target_compile_options(minesweeper PRIVATE 
-  -Wall 
-  -Wextra 
-  -Wpedantic 
-  -g
-  -Og
-  -fsanitize=address,undefined
-)
 
-target_link_options(minesweeper PRIVATE
-  -fsanitize=address,undefined
-)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  target_compile_options(minesweeper PRIVATE 
+    -Wall 
+    -Wextra 
+    -Wpedantic 
+    -g
+    -Og
+    -fsanitize=address,undefined
+  )
+
+  target_link_options(minesweeper PRIVATE
+    -fsanitize=address,undefined
+  )
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  target_compile_options(minesweeper PRIVATE 
+    -W4
+  )
+endif()
 
 target_link_libraries(minesweeper PRIVATE
   tigr
