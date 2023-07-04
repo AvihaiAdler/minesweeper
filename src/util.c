@@ -2,36 +2,31 @@
 #include <stdlib.h>
 #include <time.h>
 #include "window.h"
+#ifdef MS_DEBUG
+#include <stdio.h>
+#endif
 
 #define LMB(X) ((X)&1)
 #define RMB(X) ((X)&2)
 #define MMB(X) ((X)&4)
 
-size_t calculate_window_width(struct board *restrict board) {
-  return (CELL_SIZE + CELL_SPACING) * board_cols(board) + LEFT_MARGIN + RIGHT_MARGIN;
-}
-
-size_t calculate_window_height(struct board *restrict board) {
-  return (CELL_SIZE + CELL_SPACING) * board_rows(board) + BOTTOM_MARGIN + NAVBAR_HEIGHT + TOP_PANEL_HEIGHT;
-}
-
 // get the row of a cell based on its y position
-size_t cell_row(int y, int y_begin, size_t spacing, size_t cell_size, size_t offset) {
+unsigned cell_row(int y, int y_begin, size_t spacing, size_t cell_size, size_t offset) {
   return (y - y_begin - offset) / (cell_size + spacing);
 }
 
 // get the column of a cell based on its x potision
-size_t cell_col(int x, int x_begin, size_t spacing, size_t cell_size, size_t offset) {
+unsigned cell_col(int x, int x_begin, size_t spacing, size_t cell_size, size_t offset) {
   return (x - x_begin - offset) / (cell_size + spacing);
 }
 
 /* returns the left most x position of a cell based on its index */
-int cell_x_coord(int col, int x_begin, size_t spacing, size_t cell_size, size_t offset) {
+unsigned cell_x_coord(unsigned col, unsigned x_begin, size_t spacing, size_t cell_size, size_t offset) {
   return col * (spacing + cell_size) + x_begin + offset;
 }
 
 /* returns the top most y position of a cell based on its index */
-int cell_y_coord(int row, int y_begin, size_t spacing, size_t cell_size, size_t offset) {
+unsigned cell_y_coord(unsigned row, unsigned y_begin, size_t spacing, size_t cell_size, size_t offset) {
   return row * (spacing + cell_size) + y_begin + offset;
 }
 
@@ -43,11 +38,12 @@ size_t difficulty_index(enum difficulty difficulty) {
 static inline struct cell *get_cell(struct board *restrict board,
                                     unsigned x,
                                     unsigned y,
-                                    struct panel const *restrict panel) {
+                                    struct panel const *restrict panel,
+                                    Tigr const *restrict bmp) {
   if (!board || !panel) return NULL;
 
-  if (x < panel->x_begin || x > panel->x_end) return NULL;
-  if (y < panel->y_begin || y > panel->y_end) return NULL;
+  if (x < x_begin(panel, bmp->w) || x > x_begin(panel, bmp->w) + panel->width) return NULL;
+  if (y < panel->y_begin || y > panel->y_begin + panel->height) return NULL;
 
   /**
    * each row contains: col_mines * (cell_size + spacing) > x.end - x.begin
@@ -68,15 +64,15 @@ static inline struct cell *get_cell(struct board *restrict board,
 
   size_t offset = panel->properties.spacing / 2;
   size_t row = cell_row(y, panel->y_begin, panel->properties.spacing, panel->properties.cell_size, offset);
-  size_t col = cell_col(x, panel->x_begin, panel->properties.spacing, panel->properties.cell_size, offset);
+  size_t col = cell_col(x, x_begin(panel, bmp->w), panel->properties.spacing, panel->properties.cell_size, offset);
 
-  if ((size_t)y > cell_y_coord(row, panel->y_begin, panel->properties.spacing, panel->properties.cell_size, offset) +
-                    panel->properties.cell_size) {
+  if (y > cell_y_coord(row, panel->y_begin, panel->properties.spacing, panel->properties.cell_size, offset) +
+            panel->properties.cell_size) {
     return NULL;
   }
 
-  if ((size_t)x > cell_y_coord(col, panel->x_begin, panel->properties.spacing, panel->properties.cell_size, offset) +
-                    panel->properties.cell_size) {
+  if (x > cell_y_coord(col, x_begin(panel, bmp->w), panel->properties.spacing, panel->properties.cell_size, offset) +
+            panel->properties.cell_size) {
     return NULL;
   }
 
@@ -87,8 +83,8 @@ static inline bool reset_pressed(struct panel const *restrict top, unsigned x, u
   if (!top) return false;
   if (!LMB(buttons)) { return false; }
 
-  unsigned mid_width = top->x_end / 2 - top->x_begin / 2 + top->x_begin;
-  unsigned mid_height = top->y_end / 2 - top->y_begin / 2 + top->y_begin;
+  unsigned mid_width = top->width / 2 + top->x_begin;
+  unsigned mid_height = top->height / 2 + top->y_begin;
   return x >= mid_width - top->properties.cell_size / 2 && x <= mid_width + top->properties.cell_size / 2 &&
          y >= mid_height - top->properties.cell_size / 2 && y <= mid_height + top->properties.cell_size / 2;
 }
@@ -97,7 +93,10 @@ int panel_index(unsigned x, unsigned y, struct window *restrict window) {
   for (size_t i = 0; i < window->panels_amount; i++) {
     struct panel *current = window->panels[i];
 
-    if (x >= current->x_begin && x <= current->x_end && y >= current->y_begin && y <= current->y_end) { return i; }
+    if (x >= x_begin(current, window->bmp->w) && x <= x_begin(current, window->bmp->w) + current->width &&
+        y >= current->y_begin && y <= current->y_begin + current->height) {
+      return i;
+    }
   }
 
   return -1;
@@ -205,6 +204,9 @@ void on_mouse_click(struct window *restrict window, struct game *restrict game, 
   if (game->prev_event == MOUSE_DOWN) return;
 
   enum panels p_idx = panel_index(x, y, window);
+#ifdef MS_DEBUG
+  printf("panel: %d (x: %d, y: %d)\n", p_idx, x, y);
+#endif
 
   switch (p_idx) {
     case P_NAVBAR: {
@@ -215,52 +217,53 @@ void on_mouse_click(struct window *restrict window, struct game *restrict game, 
                     calculate_window_width(&game->board),
                     calculate_window_height(&game->board),
                     "minesweeper",
-                    TIGR_FIXED);
+                    TIGR_AUTO | TIGR_2X);
 
     } break;
-    case P_TOP: {
+    case P_TOP:
       game->game_state = init_new_game(game, game->difficulty);
       break;
-      case P_MAIN:
-        if (game->game_state != STATE_PLAYING) { return; }
+    case P_MAIN: {
+      if (game->game_state != STATE_PLAYING) { return; }
 
-        struct cell *current_cell = get_cell(&game->board, x, y, window->panels[P_MAIN]);
-        if (!current_cell) return;
+      struct cell *current_cell = get_cell(&game->board, x, y, window->panels[P_MAIN], window->bmp);
+      if (!current_cell) return;
 
-        struct panel *panel = window->panels[P_MAIN];
-        size_t offset = panel->properties.spacing / 2;
-        size_t row = cell_row(y, panel->y_begin, panel->properties.spacing, panel->properties.cell_size, offset);
-        size_t col = cell_col(x, panel->x_begin, panel->properties.spacing, panel->properties.cell_size, offset);
+      struct panel *panel = window->panels[P_MAIN];
+      size_t offset = panel->properties.spacing / 2;
+      size_t row = cell_row(y, panel->y_begin, panel->properties.spacing, panel->properties.cell_size, offset);
+      size_t col =
+        cell_col(x, x_begin(panel, window->bmp->w), panel->properties.spacing, panel->properties.cell_size, offset);
 
-        if (MMB(buttons)) {  // click on a revealed cell
-          if (!current_cell->revealed) return;
+      if (MMB(buttons)) {  // click on a revealed cell
+        if (!current_cell->revealed) return;
 
-          // discover all cells in range
-          // questionable _at best_ but hey! it works!
-          game->board.revealed_cells--;
-          current_cell->revealed = false;
+        // discover all cells in range
+        // questionable _at best_ but hey! it works!
+        game->board.revealed_cells--;
+        current_cell->revealed = false;
+        reveal_next_cell(&game->board, row, col, &game->game_state);
+      } else if (LMB(buttons)) {
+        if (current_cell->flagged) { return; }
+
+        if (current_cell->mine) { game->game_state = STATE_LOST; }
+
+        if (!current_cell->mine && !current_cell->adjacent_mines) {  // cell has a numeric value of 0
           reveal_next_cell(&game->board, row, col, &game->game_state);
-        } else if (LMB(buttons)) {
-          if (current_cell->flagged) { return; }
-
-          if (current_cell->mine) { game->game_state = STATE_LOST; }
-
-          if (!current_cell->mine && !current_cell->adjacent_mines) {  // cell has a numeric value of 0
-            reveal_next_cell(&game->board, row, col, &game->game_state);
-          } else {
-            board_reveal_cell(&game->board, row, col);
-          }
-
-        } else if (RMB(buttons)) {
-          current_cell->flagged = !current_cell->flagged;
-          current_cell->flagged ? game->mines_counter-- : game->mines_counter++;
+        } else {
+          board_reveal_cell(&game->board, row, col);
         }
 
-        // check win condition
-        if (board_revealed_cells(&game->board) && game->game_state == STATE_PLAYING) {
-          game->game_state = STATE_WON;
-          game->mines_counter = 0;
-        }
+      } else if (RMB(buttons)) {
+        current_cell->flagged = !current_cell->flagged;
+        current_cell->flagged ? game->mines_counter-- : game->mines_counter++;
+      }
+
+      // check win condition
+      if (board_revealed_cells(&game->board) && game->game_state == STATE_PLAYING) {
+        game->game_state = STATE_WON;
+        game->mines_counter = 0;
+      }
     } break;
     default:
       break;

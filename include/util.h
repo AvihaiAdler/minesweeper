@@ -7,19 +7,13 @@
 #include "panel.h"
 #include "window.h"
 
-struct window;
+unsigned cell_row(int y, int y_begin, size_t spacing, size_t cell_size, size_t offset);
 
-size_t calculate_window_width(struct board *restrict board);
+unsigned cell_col(int x, int x_begin, size_t spacing, size_t cell_size, size_t offset);
 
-size_t calculate_window_height(struct board *restrict board);
+unsigned cell_x_coord(unsigned col, unsigned x_begin, size_t spacing, size_t cell_size, size_t offset);
 
-size_t cell_row(int y, int y_begin, size_t spacing, size_t cell_size, size_t offset);
-
-size_t cell_col(int x, int x_begin, size_t spacing, size_t cell_size, size_t offset);
-
-int cell_y_coord(int row, int y_begin, size_t spacing, size_t cell_size, size_t offset);
-
-int cell_x_coord(int col, int x_begin, size_t spacing, size_t cell_size, size_t offset);
+unsigned cell_y_coord(unsigned row, unsigned y_begin, size_t spacing, size_t cell_size, size_t offset);
 
 void reveal_all_mines(struct board *restrict board);
 

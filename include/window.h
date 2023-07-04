@@ -1,8 +1,8 @@
 #pragma once
 #include <stddef.h>
 #include "game_properties.h"
+#include "panel.h"
 #include "tigr.h"
-#include "util.h"
 
 enum panels {
   P_NAVBAR = 0,
@@ -26,3 +26,7 @@ void window_destroy(struct window *window);
 void draw_window(struct window *restrict window, struct game *restrict game, enum mouse_event mouse_event);
 
 Tigr *draw_alert(char const *message);
+
+size_t calculate_window_width(struct board *restrict board);
+
+size_t calculate_window_height(struct board *restrict board);
