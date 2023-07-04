@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 
 #define RED 240, 0, 0
 #define BLACK 0, 0, 0
@@ -44,9 +45,9 @@ void window_resize(struct window *restrict window, size_t width, size_t height, 
   // re-calculate the new panels offsets
   for (size_t i = 0; i < window->panels_amount; i++) {
     struct panel *current = window->panels[i];
+    current->width = width - (LEFT_MARGIN + RIGHT_MARGIN);
 
-    current->x_end = new_bmp->w - (window->bmp->w - current->x_end);
-    current->y_end = new_bmp->h - (window->bmp->h - current->y_end);
+    if (i == P_MAIN) current->height = height - (current->y_begin + BOTTOM_MARGIN);
   }
   tigrFree(window->bmp);
   window->bmp = new_bmp;
@@ -104,20 +105,16 @@ static inline void draw_navbar_panel(Tigr *restrict bmp,
 
   tigrBlitAlpha(bmp,
                 panel->assests[panel->assets_amount - 1],
-                panel->x_begin,
-                (panel->y_end - panel->y_begin) / 2 - panel->assests[panel->assets_amount - 1]->h / 2,
+                x_begin(panel, bmp->w),
+                y_begin(panel, bmp->h) - panel->assests[panel->assets_amount - 1]->h / 2,
                 0,
                 0,
                 panel->assests[panel->assets_amount - 1]->w,
                 panel->assests[panel->assets_amount - 1]->h,
                 DEFAULT_BLIT_ALPHA);
+
 #ifdef MS_DEBUG
-  tigrRect(bmp,
-           panel->x_begin,
-           panel->y_begin,
-           panel->x_end - panel->x_begin,
-           panel->y_end - panel->y_begin,
-           tigrRGB(RED));
+  tigrRect(bmp, x_begin(panel, bmp->w), panel->y_begin, panel->width, panel->height, tigrRGB(BLACK));
 #endif
 }
 
@@ -156,13 +153,11 @@ static inline void draw_button(Tigr *restrict bmp,
       break;
   }
 
-  int width = panel->x_end - panel->x_begin;
-  int height = panel->y_end - panel->y_begin;
   // background
   tigrBlitAlpha(bmp,
                 panel->assests[EM_BACKGROUND],
-                width / 2 - panel->assests[EM_BACKGROUND]->w / 2 + panel->x_begin,
-                height / 2 - panel->assests[EM_BACKGROUND]->h / 2 + panel->y_begin,
+                x_begin(panel, bmp->w) - panel->assests[EM_BACKGROUND]->w / 2 + panel->width / 2,
+                y_begin(panel, bmp->h) - panel->assests[EM_BACKGROUND]->h / 2,
                 0,
                 0,
                 panel->assests[EM_BACKGROUND]->w,
@@ -172,8 +167,8 @@ static inline void draw_button(Tigr *restrict bmp,
   if (emojii) {
     tigrBlitAlpha(bmp,
                   emojii,
-                  width / 2 - emojii->w / 2 + panel->x_begin,
-                  height / 2 - emojii->h / 2 + panel->y_begin,
+                  x_begin(panel, bmp->w) - emojii->w / 2 + panel->width / 2,
+                  y_begin(panel, bmp->h) - emojii->h / 2,
                   0,
                   0,
                   emojii->w,
@@ -192,8 +187,7 @@ static inline void draw_mines_count(Tigr *restrict bmp, struct panel const *rest
 
   int text_height = tigrTextHeight(tfont, mines_as_str);
 
-  size_t height = panel->y_end - panel->y_begin;
-  tigrPrint(bmp, tfont, panel->x_begin, panel->y_begin + height / 2 - text_height / 2, tigrRGB(RED), mines_as_str);
+  tigrPrint(bmp, tfont, x_begin(panel, bmp->w), y_begin(panel, bmp->h) - text_height / 2, tigrRGB(RED), mines_as_str);
 }
 
 static inline void draw_timer(Tigr *restrict bmp, struct panel const *restrict panel, time_t start, time_t end) {
@@ -209,11 +203,10 @@ static inline void draw_timer(Tigr *restrict bmp, struct panel const *restrict p
   int text_height = tigrTextHeight(tfont, seconds_as_str);
   int text_width = tigrTextWidth(tfont, seconds_as_str);
 
-  size_t height = panel->y_end - panel->y_begin;
   tigrPrint(bmp,
             tfont,
-            panel->x_end - text_width,
-            panel->y_begin + height / 2 - text_height / 2,
+            x_begin(panel, bmp->w) + panel->width - text_width,
+            y_begin(panel, bmp->h) - text_height / 2,
             tigrRGB(RED),
             seconds_as_str);
 }
@@ -230,12 +223,7 @@ static inline void draw_top_panel(Tigr *restrict bmp,
   draw_mines_count(bmp, panel, game->mines_counter);
 
 #ifdef MS_DEBUG
-  tigrRect(bmp,
-           panel->x_begin,
-           panel->y_begin,
-           panel->x_end - panel->x_begin,
-           panel->y_end - panel->y_begin,
-           tigrRGB(RED));
+  tigrRect(bmp, x_begin(panel, bmp->w), panel->y_begin, panel->width, panel->height, tigrRGB(RED));
 #endif
 }
 
@@ -291,10 +279,15 @@ void draw_main_panel(Tigr *restrict bmp, struct panel const *restrict panel, str
    */
 
   size_t offset = panel->properties.spacing / 2;
-  for (int i = 0; i < (int)board_rows(&game->board); i++) {
-    for (int j = 0; j < (int)board_cols(&game->board); j++) {
-      int x = cell_x_coord(j, panel->x_begin, panel->properties.spacing, panel->properties.cell_size, offset);
-      int y = cell_y_coord(i, panel->y_begin, panel->properties.spacing, panel->properties.cell_size, offset);
+  for (unsigned i = 0; i < board_rows(&game->board); i++) {
+    for (unsigned j = 0; j < board_cols(&game->board); j++) {
+      unsigned x =
+        cell_x_coord(j, x_begin(panel, bmp->w), panel->properties.spacing, panel->properties.cell_size, offset);
+      unsigned y = cell_y_coord(i,
+                                y_begin(panel, bmp->h) - panel->height / 2,
+                                panel->properties.spacing,
+                                panel->properties.cell_size,
+                                offset);
 
       struct cell *cell = board_get_cell(&game->board, i, j);
       if (!cell) continue;
@@ -387,21 +380,16 @@ void draw_main_panel(Tigr *restrict bmp, struct panel const *restrict panel, str
   }
 
 #ifdef MS_DEBUG
-  tigrRect(bmp,
-           panel->x_begin,
-           panel->y_begin,
-           panel->x_end - panel->x_begin,
-           panel->y_end - panel->y_begin,
-           tigrRGB(RED));
+  tigrRect(bmp, x_begin(panel, bmp->w), panel->y_begin, panel->width, panel->height, tigrRGB(GREY));
 #endif
 }
 
 void draw_window(struct window *restrict window, struct game *restrict game, enum mouse_event mouse_event) {
   if (!window || !game) return;
 
+  draw_main_panel(window->bmp, window->panels[P_MAIN], game);
   draw_navbar_panel(window->bmp, window->panels[P_NAVBAR], game);
   draw_top_panel(window->bmp, window->panels[P_TOP], game, mouse_event);
-  draw_main_panel(window->bmp, window->panels[P_MAIN], game);
 }
 
 Tigr *draw_alert(char const *message) {
@@ -420,4 +408,12 @@ Tigr *draw_alert(char const *message) {
             message);
 
   return alert_window;
+}
+
+size_t calculate_window_width(struct board *restrict board) {
+  return (CELL_SIZE + CELL_SPACING) * board_cols(board) + LEFT_MARGIN + RIGHT_MARGIN;
+}
+
+size_t calculate_window_height(struct board *restrict board) {
+  return (CELL_SIZE + CELL_SPACING) * board_rows(board) + BOTTOM_MARGIN + NAVBAR_HEIGHT + TOP_PANEL_HEIGHT;
 }
