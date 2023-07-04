@@ -3,9 +3,9 @@
 #include <stdlib.h>
 
 struct panel *panel_create(unsigned x_begin,
-                           unsigned x_end,
                            unsigned y_begin,
-                           unsigned y_end,
+                           unsigned width,
+                           unsigned height,
                            struct panel_properties properties,
                            size_t assets_amount,
                            ...) {
@@ -13,9 +13,9 @@ struct panel *panel_create(unsigned x_begin,
   if (!panel) { return NULL; }
 
   *panel = (struct panel){.x_begin = x_begin,
-                          .x_end = x_end,
                           .y_begin = y_begin,
-                          .y_end = y_end,
+                          .width = width,
+                          .height = height,
                           .properties = properties,
                           .assets_amount = assets_amount};
 
@@ -67,4 +67,14 @@ void panel_destroy(struct panel *restrict panel) {
     tigrFree(panel->assests[i]);
   }
   free(panel);
+}
+
+/* returns the starting x coordinate of a panel (the left most x point */
+unsigned x_begin(struct panel const *restrict panel, size_t width) {
+  return width / 2 - panel->width / 2 + panel->x_begin;
+}
+
+unsigned y_begin(struct panel const *restrict panel, size_t height) {
+  (void)height;
+  return /*height / 2 - */ panel->height / 2 + panel->y_begin;
 }

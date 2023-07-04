@@ -3,6 +3,12 @@
 #include <stddef.h>
 #include "tigr.h"
 
+/**
+ * @brief a 'virtual entity' holding its dimentions and the bitmaps (assets) it uses. all drawing are being done on the
+ * main bitmap
+ *
+ */
+
 struct panel_properties {
   size_t cell_size;
   size_t spacing;
@@ -13,9 +19,10 @@ struct panel_properties {
  */
 struct panel {
   unsigned x_begin;
-  unsigned x_end;
   unsigned y_begin;
-  unsigned y_end;
+
+  unsigned width;
+  unsigned height;
 
   struct panel_properties properties;
   size_t assets_amount;
@@ -24,9 +31,9 @@ struct panel {
 
 // creates a panel with `assets_amount` assets. expects `assets_amount` of type `char const *`
 struct panel *panel_create(unsigned x_begin,
-                           unsigned x_end,
                            unsigned y_begin,
-                           unsigned y_end,
+                           unsigned width,
+                           unsigned height,
                            struct panel_properties properties,
                            size_t assets_amount,
                            ...);
@@ -36,3 +43,9 @@ struct panel *panel_create(unsigned x_begin,
 struct panel *panel_expand(struct panel *restrict panel, size_t assets_amount, ...);
 
 void panel_destroy(struct panel *restrict panel);
+
+/* returns the starting x coordinate of a panel (the left most x point) */
+unsigned x_begin(struct panel const *restrict panel, size_t width);
+
+/* returns the starting y coordinate of a panel (the top most point) */
+unsigned y_begin(struct panel const *restrict panel, size_t height);
