@@ -21,8 +21,7 @@ struct window *window_create(size_t width, size_t height, char *const title, int
     return NULL;
   }
 
-  window->bmp = bmp;
-  window->panels_amount = panels_amount;
+  *window = (struct window){.bmp = bmp, .navbar_toggled = false, .panels_amount = panels_amount};
 
   va_list args;
   va_start(args, panels_amount);
@@ -85,33 +84,35 @@ static inline char *sprintf_wrapper(char *buf, size_t size, char const *fmt, ...
   return buf;
 }
 
-static inline char const *difficulty_as_str(enum difficulty difficulty) {
-  switch (difficulty) {
-    case MS_CLASSIC:
-      return "classic";
-    case MS_ADVANCED:
-      return "advanced";
-    case MS_EXPERT:
-      return "expert";
-    default:
-      return "custom";
-  }
-}
-
+// TODO: generate difficulties as text and draw them if game::navbar_toggle is true. maybe as assets of their own
 static inline void draw_navbar_panel(Tigr *restrict bmp,
                                      struct panel const *restrict panel,
-                                     struct game const *restrict game) {
+                                     struct game const *restrict game,
+                                     bool toggled) {
   if (!bmp || !panel || !game) return;
 
+  // draw the humburger unconditionally
   tigrBlitAlpha(bmp,
-                panel->assests[panel->assets_amount - 1],
+                panel->assests[0],
                 x_begin(panel, bmp->w),
-                y_begin(panel, bmp->h) - panel->assests[panel->assets_amount - 1]->h / 2,
+                y_begin(panel, bmp->h) - panel->assests[0]->h / 2,
                 0,
                 0,
-                panel->assests[panel->assets_amount - 1]->w,
-                panel->assests[panel->assets_amount - 1]->h,
+                panel->assests[0]->w,
+                panel->assests[0]->h,
                 DEFAULT_BLIT_ALPHA);
+
+  if (!toggled) return;
+
+  // first asset is the humburger
+  for (size_t i = 1; i < panel->assets_amount; i++) {
+    Tigr *asset = panel->assests[i];
+    unsigned x = x_begin(panel, bmp->w) + panel->properties.spacing + panel->properties.cell_size * i;
+
+    tigrRect(bmp, x, y_begin(panel, bmp->h) - asset->h / 2, asset->w, asset->h, tigrRGB(BLACK));
+
+    tigrBlitAlpha(bmp, asset, x, y_begin(panel, bmp->h) - asset->h / 2, 0, 0, asset->w, asset->h, DEFAULT_BLIT_ALPHA);
+  }
 
 #ifdef MS_DEBUG
   tigrRect(bmp, x_begin(panel, bmp->w), panel->y_begin, panel->width, panel->height, tigrRGB(BLACK));
@@ -388,7 +389,7 @@ void draw_window(struct window *restrict window, struct game *restrict game, enu
   if (!window || !game) return;
 
   draw_main_panel(window->bmp, window->panels[P_MAIN], game);
-  draw_navbar_panel(window->bmp, window->panels[P_NAVBAR], game);
+  draw_navbar_panel(window->bmp, window->panels[P_NAVBAR], game, window->navbar_toggled);
   draw_top_panel(window->bmp, window->panels[P_TOP], game, mouse_event);
 }
 
