@@ -1,4 +1,5 @@
 #pragma once
+#include <stdbool.h>
 #include <stddef.h>
 #include "game_properties.h"
 #include "panel.h"
@@ -12,6 +13,7 @@ enum panels {
 
 struct window {
   Tigr *bmp;
+  bool navbar_toggled;
 
   size_t panels_amount;
   struct panel *panels[];

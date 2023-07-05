@@ -44,4 +44,4 @@ struct game {
 
 #define CELL_SIZE 20
 #define CELL_SPACING 0
-#define NAVBAR_SPACING 5
+#define NAVBAR_SPACING 2

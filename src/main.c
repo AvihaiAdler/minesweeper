@@ -30,18 +30,17 @@ int main(void) {
                                         window_width - (RIGHT_MARGIN + LEFT_MARGIN),
                                         NAVBAR_HEIGHT,
                                         (struct panel_properties){
-                                          .cell_size = CELL_SIZE,
+                                          .cell_size = CELL_SIZE * 2,
                                           .spacing = NAVBAR_SPACING,
                                         },
-                                        4,
-                                        "assets/classic",
-                                        "assets/advanced",
-                                        "assets/expert",
-                                        "assets/button");
+                                        1,
+                                        "assets/humburger");
   if (!p_navbar) {
     tigrError(NULL, "failed to create the navbar");
     goto game_cleanup;
   }
+
+  p_navbar = create_difficulties_assets(p_navbar, p_navbar->properties.cell_size, p_navbar->height);
 
   struct panel *p_top = panel_create(LEFT_MARGIN,
                                      NAVBAR_HEIGHT,
