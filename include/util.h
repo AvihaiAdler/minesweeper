@@ -24,3 +24,5 @@ struct game game_create(enum difficulty difficulty);
 void game_destroy(struct game *restrict game);
 
 enum game_state init_new_game(struct game *restrict game, enum difficulty difficulty);
+
+struct panel *create_difficulties_assets(struct panel *restrict navbar, unsigned width, unsigned height);

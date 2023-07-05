@@ -177,17 +177,6 @@ static inline void reveal_next_cell(struct board *restrict board, int row, int c
   reveal_next_cell(board, row - 1, col - 1, state);
 }
 
-static inline void reveal_all_cells(struct board *restrict board) {
-  if (!board) return;
-
-  for (size_t i = 0; i < board_rows(board); i++) {
-    for (size_t j = 0; j < board_cols(board); j++) {
-      struct cell *cell = board_get_cell(board, i, j);
-      if (cell) cell->revealed = true;
-    }
-  }
-}
-
 static inline bool difficulty_pressed(unsigned x, unsigned y, struct panel const *restrict panel) {
   return x >= panel->x_begin && x <= panel->x_begin + panel->assests[panel->assets_amount - 1]->w &&
          y >= panel->y_begin + panel->assests[panel->assets_amount - 1]->h / 2 &&
@@ -210,6 +199,8 @@ void on_mouse_click(struct window *restrict window, struct game *restrict game, 
 
   switch (p_idx) {
     case P_NAVBAR: {
+      if (!LMB(buttons)) return;
+      window->navbar_toggled = !window->navbar_toggled;
       enum difficulty new_difficulty = difficulties[(difficulty_index(game->board.difficulty) + 1) % MS_DIFFICULTIES];
       game->game_state = init_new_game(game, new_difficulty);
 
@@ -221,7 +212,9 @@ void on_mouse_click(struct window *restrict window, struct game *restrict game, 
 
     } break;
     case P_TOP:
-      game->game_state = init_new_game(game, game->difficulty);
+      if (LMB(buttons) && reset_pressed(window->panels[p_idx], x, y, buttons)) {
+        game->game_state = init_new_game(game, game->difficulty);
+      }
       break;
     case P_MAIN: {
       if (game->game_state != STATE_PLAYING) { return; }
@@ -301,4 +294,41 @@ enum game_state init_new_game(struct game *restrict game, enum difficulty diffic
   game->mines_counter = board_get_mines_amount(&game->board);
 
   return STATE_PLAYING;
+}
+
+static inline char const *difficulty_as_str(enum difficulty difficulty) {
+  switch (difficulty) {
+    case MS_CLASSIC:
+      return "classic";
+    case MS_ADVANCED:
+      return "advanced";
+    case MS_EXPERT:
+      return "expert";
+    default:
+      return "custom";
+  }
+}
+
+struct panel *create_difficulties_assets(struct panel *restrict navbar, unsigned width, unsigned height) {
+  enum difficulty difficulties[] = {MS_CLASSIC, MS_ADVANCED, MS_EXPERT};
+
+  for (size_t i = 0; i < sizeof difficulties / sizeof *difficulties; i++) {
+    char const *difficulty_str = difficulty_as_str(difficulties[i]);
+    int text_width = tigrTextWidth(tfont, difficulty_str);
+    int text_height = tigrTextHeight(tfont, difficulty_str);
+
+    Tigr *asset = tigrBitmap(width, height);
+    if (!asset) continue;
+
+    tigrPrint(asset,
+              tfont,
+              asset->w / 2 - text_width / 2,
+              asset->h / 2 - text_height / 2,
+              tigrRGB(0, 0, 0),
+              difficulty_str);
+
+    navbar = panel_add_assets(navbar, 1, asset);
+  }
+
+  return navbar;
 }
