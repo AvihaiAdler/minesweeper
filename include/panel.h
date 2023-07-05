@@ -38,9 +38,8 @@ struct panel *panel_create(unsigned x_begin,
                            size_t assets_amount,
                            ...);
 
-// expand an existing panel. if `assets_amount` > `panel::assets_amount` the new assets will be added to the existing
-// ones. this function is differ from panel_create in that it expects `assets_amount` of type `Tigr *`
-struct panel *panel_expand(struct panel *restrict panel, size_t assets_amount, ...);
+// this function is differ from panel_create in that it expects `assets_amount` of type `Tigr *`
+struct panel *panel_add_assets(struct panel *restrict panel, size_t assets_amount, ...);
 
 void panel_destroy(struct panel *restrict panel);
 
