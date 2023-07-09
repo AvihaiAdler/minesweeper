@@ -27,7 +27,7 @@ void window_destroy(struct window *window);
 
 void draw_window(struct window *restrict window, struct game *restrict game, enum mouse_event mouse_event);
 
-Tigr *draw_alert(char const *message);
+void draw_alert(char const *message);
 
 size_t calculate_window_width(struct board *restrict board);
 

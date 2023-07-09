@@ -10,6 +10,7 @@
  */
 
 struct panel_properties {
+  TigrFont *font;
   size_t cell_size;
   size_t spacing;
 };
@@ -26,7 +27,7 @@ struct panel {
 
   struct panel_properties properties;
   size_t assets_amount;
-  Tigr *assests[];
+  Tigr *assets[];
 };
 
 // creates a panel with `assets_amount` assets. expects `assets_amount` of type `char const *`

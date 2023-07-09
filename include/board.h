@@ -50,5 +50,3 @@ bool board_revealed_cells(struct board *restrict board);
 void board_reveal_cell(struct board *restrict board, size_t row, size_t col);
 
 struct cell *board_get_cell(struct board *restrict board, size_t row, size_t col);
-
-extern enum difficulty difficulties[MS_DIFFICULTIES];

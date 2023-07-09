@@ -79,14 +79,19 @@ static inline struct cell *get_cell(struct board *restrict board,
   return board_get_cell(board, row, col);
 }
 
-static inline bool reset_pressed(struct panel const *restrict top, unsigned x, unsigned y, int buttons) {
+static inline bool reset_pressed(struct panel const *restrict top,
+                                 unsigned width,
+                                 unsigned height,
+                                 unsigned x,
+                                 unsigned y) {
   if (!top) return false;
-  if (!LMB(buttons)) { return false; }
 
-  unsigned mid_width = top->width / 2 + top->x_begin;
-  unsigned mid_height = top->height / 2 + top->y_begin;
-  return x >= mid_width - top->properties.cell_size / 2 && x <= mid_width + top->properties.cell_size / 2 &&
-         y >= mid_height - top->properties.cell_size / 2 && y <= mid_height + top->properties.cell_size / 2;
+  Tigr *cell_background = top->assets[top->assets_amount - 1];
+
+  // asset/cell should always be at index `assets_amount - 1`
+  return x >= x_begin(top, width) - cell_background->w / 2 + top->width / 2 &&
+         x <= x_begin(top, width) + cell_background->w / 2 + top->width / 2 &&
+         y >= y_begin(top, height) - cell_background->h / 2 && y <= y_begin(top, height) + cell_background->h / 2;
 }
 
 int panel_index(unsigned x, unsigned y, struct window *restrict window) {
@@ -177,11 +182,17 @@ static inline void reveal_next_cell(struct board *restrict board, int row, int c
   reveal_next_cell(board, row - 1, col - 1, state);
 }
 
-static inline bool difficulty_pressed(unsigned x, unsigned y, struct panel const *restrict panel) {
-  return x >= panel->x_begin && x <= panel->x_begin + panel->assests[panel->assets_amount - 1]->w &&
-         y >= panel->y_begin + panel->assests[panel->assets_amount - 1]->h / 2 &&
-         y <= panel->y_begin + panel->assests[panel->assets_amount - 1]->h +
-                panel->assests[panel->assets_amount - 1]->h / 2;
+static inline bool menu_pressed(struct panel const *restrict panel,
+                                unsigned width,
+                                unsigned height,
+                                unsigned x,
+                                unsigned y) {
+  if (!panel) return false;
+
+  // button should always be at index 0
+  Tigr *button = panel->assets[0];
+  return x >= x_begin(panel, width) && x <= x_begin(panel, width) + button->w &&
+         y >= y_begin(panel, height) - button->h / 2 && y <= y_begin(panel, height) + button->h / 2;
 }
 
 void on_mouse_click(struct window *restrict window, struct game *restrict game, int x, int y, int buttons) {
@@ -192,6 +203,11 @@ void on_mouse_click(struct window *restrict window, struct game *restrict game, 
   // prevent the case of 'holding mouse down'
   if (game->prev_event == MOUSE_DOWN) return;
 
+  if (window->navbar_toggled) {
+    window->navbar_toggled = false;
+    return;
+  }
+
   enum panels p_idx = panel_index(x, y, window);
 #ifdef MS_DEBUG
   printf("panel: %d (x: %d, y: %d)\n", p_idx, x, y);
@@ -199,20 +215,24 @@ void on_mouse_click(struct window *restrict window, struct game *restrict game, 
 
   switch (p_idx) {
     case P_NAVBAR: {
-      if (!LMB(buttons)) return;
-      window->navbar_toggled = !window->navbar_toggled;
-      enum difficulty new_difficulty = difficulties[(difficulty_index(game->board.difficulty) + 1) % MS_DIFFICULTIES];
-      game->game_state = init_new_game(game, new_difficulty);
+      if (LMB(buttons) && menu_pressed(window->panels[p_idx], window->bmp->w, window->bmp->h, x, y)) {
+#ifdef MS_DEBUG
+        printf("hit!\n");
+#endif
+        window->navbar_toggled = !window->navbar_toggled;
+      }
+      // enum difficulty new_difficulty = difficulties[(difficulty_index(game->board.difficulty) + 1) %
+      // MS_DIFFICULTIES]; game->game_state = init_new_game(game, new_difficulty);
 
-      window_resize(window,
-                    calculate_window_width(&game->board),
-                    calculate_window_height(&game->board),
-                    "minesweeper",
-                    TIGR_AUTO | TIGR_2X);
+      // window_resize(window,
+      //               calculate_window_width(&game->board),
+      //               calculate_window_height(&game->board),
+      //               "minesweeper",
+      //               TIGR_AUTO | TIGR_2X);
 
     } break;
     case P_TOP:
-      if (LMB(buttons) && reset_pressed(window->panels[p_idx], x, y, buttons)) {
+      if (LMB(buttons) && reset_pressed(window->panels[p_idx], window->bmp->w, window->bmp->h, x, y)) {
         game->game_state = init_new_game(game, game->difficulty);
       }
       break;
@@ -309,26 +329,37 @@ static inline char const *difficulty_as_str(enum difficulty difficulty) {
   }
 }
 
-struct panel *create_difficulties_assets(struct panel *restrict navbar, unsigned width, unsigned height) {
+static inline unsigned max_width_difficulty(enum difficulty const *restrict difficulties,
+                                            size_t amount,
+                                            TigrFont *restrict font) {
+  unsigned max = 0;
+  for (size_t i = 0; i < amount; i++) {
+    unsigned width = tigrTextWidth(font, difficulty_as_str(difficulties[i]));
+    if (width > max) max = width;
+  }
+  return max;
+}
+
+struct panel *create_difficulties_assets(struct panel *restrict navbar) {
   enum difficulty difficulties[] = {MS_CLASSIC, MS_ADVANCED, MS_EXPERT};
+  size_t difficulties_amount = sizeof difficulties / sizeof *difficulties;
 
-  for (size_t i = 0; i < sizeof difficulties / sizeof *difficulties; i++) {
+  TigrFont *font = navbar->properties.font ? navbar->properties.font : tfont;
+
+  unsigned width = max_width_difficulty(difficulties, difficulties_amount, font);
+  unsigned text_height = tigrTextHeight(font, difficulty_as_str(*difficulties));
+
+  Tigr *menu = tigrBitmap(width, difficulties_amount * (text_height + navbar->properties.spacing));
+  if (!menu) return navbar;
+
+  tigrClear(menu, tigrRGBA(BOARD_COLORS));
+  tigrFill(menu, 0, 0, menu->w, menu->h, tigrRGBA(BOARD_COLORS));
+
+  for (size_t i = 0; i < difficulties_amount; i++) {
     char const *difficulty_str = difficulty_as_str(difficulties[i]);
-    int text_width = tigrTextWidth(tfont, difficulty_str);
-    int text_height = tigrTextHeight(tfont, difficulty_str);
 
-    Tigr *asset = tigrBitmap(width, height);
-    if (!asset) continue;
-
-    tigrPrint(asset,
-              tfont,
-              asset->w / 2 - text_width / 2,
-              asset->h / 2 - text_height / 2,
-              tigrRGB(0, 0, 0),
-              difficulty_str);
-
-    navbar = panel_add_assets(navbar, 1, asset);
+    tigrPrint(menu, font, 0, i * text_height, tigrRGB(0, 0, 0), difficulty_str);
   }
 
-  return navbar;
+  return panel_add_assets(navbar, 1, menu);
 }

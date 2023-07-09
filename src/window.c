@@ -91,38 +91,41 @@ static inline void draw_navbar_panel(Tigr *restrict bmp,
                                      bool toggled) {
   if (!bmp || !panel || !game) return;
 
+#ifdef MS_DEBUG
+  tigrRect(bmp, x_begin(panel, bmp->w), panel->y_begin, panel->width, panel->height, tigrRGB(BLACK));
+#endif
+
   // draw the humburger unconditionally
   tigrBlitAlpha(bmp,
-                panel->assests[0],
+                panel->assets[0],
                 x_begin(panel, bmp->w),
-                y_begin(panel, bmp->h) - panel->assests[0]->h / 2,
+                y_begin(panel, bmp->h) - panel->assets[0]->h / 2,
                 0,
                 0,
-                panel->assests[0]->w,
-                panel->assests[0]->h,
+                panel->assets[0]->w,
+                panel->assets[0]->h,
                 DEFAULT_BLIT_ALPHA);
 
   if (!toggled) return;
 
-  // first asset is the humburger
-  for (size_t i = 1; i < panel->assets_amount; i++) {
-    Tigr *asset = panel->assests[i];
-    unsigned x = x_begin(panel, bmp->w) + panel->properties.spacing + panel->properties.cell_size * i;
-
-    tigrRect(bmp, x, y_begin(panel, bmp->h) - asset->h / 2, asset->w, asset->h, tigrRGB(BLACK));
-
-    tigrBlitAlpha(bmp, asset, x, y_begin(panel, bmp->h) - asset->h / 2, 0, 0, asset->w, asset->h, DEFAULT_BLIT_ALPHA);
-  }
-
 #ifdef MS_DEBUG
-  tigrRect(bmp, x_begin(panel, bmp->w), panel->y_begin, panel->width, panel->height, tigrRGB(BLACK));
+  printf("toggled : %s\n", toggled ? "true" : "false");
 #endif
+  // first asset is the humburger
+  tigrBlit(bmp,
+           panel->assets[1],
+           x_begin(panel, bmp->w),
+           y_begin(panel, bmp->h) + panel->assets[0]->h / 2,
+           0,
+           0,
+           panel->assets[1]->w,
+           panel->assets[1]->h);
 }
 
 static inline Tigr *get_emojii(struct panel const *restrict panel, size_t idx) {
   if (idx >= panel->assets_amount) return NULL;
 
-  return panel->assests[idx];
+  return panel->assets[idx];
 }
 
 static inline void draw_button(Tigr *restrict bmp,
@@ -156,13 +159,13 @@ static inline void draw_button(Tigr *restrict bmp,
 
   // background
   tigrBlitAlpha(bmp,
-                panel->assests[EM_BACKGROUND],
-                x_begin(panel, bmp->w) - panel->assests[EM_BACKGROUND]->w / 2 + panel->width / 2,
-                y_begin(panel, bmp->h) - panel->assests[EM_BACKGROUND]->h / 2,
+                panel->assets[EM_BACKGROUND],
+                x_begin(panel, bmp->w) - panel->assets[EM_BACKGROUND]->w / 2 + panel->width / 2,
+                y_begin(panel, bmp->h) - panel->assets[EM_BACKGROUND]->h / 2,
                 0,
                 0,
-                panel->assests[EM_BACKGROUND]->w,
-                panel->assests[EM_BACKGROUND]->h,
+                panel->assets[EM_BACKGROUND]->w,
+                panel->assets[EM_BACKGROUND]->h,
                 DEFAULT_BLIT_ALPHA);
 
   if (emojii) {
@@ -299,13 +302,13 @@ void draw_main_panel(Tigr *restrict bmp, struct panel const *restrict panel, str
 
         // cell
         tigrBlitAlpha(bmp,
-                      panel->assests[AS_MINE],
+                      panel->assets[AS_MINE],
                       x,
                       y,
                       0,
                       0,
-                      panel->assests[AS_MINE]->w,
-                      panel->assests[AS_MINE]->h,
+                      panel->assets[AS_MINE]->w,
+                      panel->assets[AS_MINE]->h,
                       DEFAULT_BLIT_ALPHA);
       } else if (cell->revealed) {
         if (cell->adjacent_mines) {  // print the numeric value of a cell if the value is 0 - simply draw an 'empty cell
@@ -333,13 +336,13 @@ void draw_main_panel(Tigr *restrict bmp, struct panel const *restrict panel, str
         tigrRect(bmp, x, y, panel->properties.cell_size, panel->properties.cell_size, tigrRGBA(GREY, CELL_ALPHA));
       } else {  // regular cell
         tigrBlitAlpha(bmp,
-                      panel->assests[AS_CELL],
+                      panel->assets[AS_CELL],
                       x,
                       y,
                       0,
                       0,
-                      panel->assests[AS_CELL]->w,
-                      panel->assests[AS_CELL]->h,
+                      panel->assets[AS_CELL]->w,
+                      panel->assets[AS_CELL]->h,
                       DEFAULT_BLIT_ALPHA);
 
 // debug
@@ -367,13 +370,13 @@ void draw_main_panel(Tigr *restrict bmp, struct panel const *restrict panel, str
 
         if (cell->flagged) {  // cell is flagged - blit the flag on top of the cell
           tigrBlitAlpha(bmp,
-                        panel->assests[AS_FLAG],
+                        panel->assets[AS_FLAG],
                         x,
                         y,
                         0,
                         0,
-                        panel->assests[AS_FLAG]->w,
-                        panel->assests[AS_FLAG]->h,
+                        panel->assets[AS_FLAG]->w,
+                        panel->assets[AS_FLAG]->h,
                         DEFAULT_BLIT_ALPHA);
         }
       }
@@ -389,26 +392,31 @@ void draw_window(struct window *restrict window, struct game *restrict game, enu
   if (!window || !game) return;
 
   draw_main_panel(window->bmp, window->panels[P_MAIN], game);
-  draw_navbar_panel(window->bmp, window->panels[P_NAVBAR], game, window->navbar_toggled);
   draw_top_panel(window->bmp, window->panels[P_TOP], game, mouse_event);
+  draw_navbar_panel(window->bmp, window->panels[P_NAVBAR], game, window->navbar_toggled);
 }
 
-Tigr *draw_alert(char const *message) {
-  if (!message) return NULL;
+void draw_alert(char const *message) {
+  if (!message) return;
 
-  Tigr *alert_window = tigrWindow(ALERT_WIDTH, ALERT_HEIGHT, "alert", TIGR_AUTO);
-  if (!alert_window) return NULL;
+  Tigr *alert_window = tigrWindow(ALERT_WIDTH, ALERT_HEIGHT, "alert", TIGR_AUTO | TIGR_2X);
+  if (!alert_window) return;
 
-  int text_width = tigrTextWidth(tfont, message);
-  int text_height = tigrTextHeight(tfont, message);
-  tigrPrint(alert_window,
-            tfont,
-            alert_window->w / 2 - text_width / 2,
-            alert_window->h / 2 + text_height / 2,
-            tigrRGB(BLACK),
-            message);
+  while (!tigrClosed(alert_window)) {
+    tigrClear(alert_window, tigrRGBA(BOARD_COLORS));
+    int text_width = tigrTextWidth(tfont, message);
+    int text_height = tigrTextHeight(tfont, message);
+    tigrPrint(alert_window,
+              tfont,
+              alert_window->w / 2 - text_width / 2,
+              alert_window->h / 2 + text_height / 2,
+              tigrRGB(BLACK),
+              message);
 
-  return alert_window;
+    tigrUpdate(alert_window);
+  }
+
+  tigrFree(alert_window);
 }
 
 size_t calculate_window_width(struct board *restrict board) {

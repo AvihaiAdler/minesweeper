@@ -9,7 +9,7 @@ struct panel *panel_create(unsigned x_begin,
                            struct panel_properties properties,
                            size_t assets_amount,
                            ...) {
-  struct panel *panel = malloc(sizeof *panel + assets_amount * sizeof *panel->assests);
+  struct panel *panel = malloc(sizeof *panel + assets_amount * sizeof *panel->assets);
   if (!panel) { return NULL; }
 
   *panel = (struct panel){.x_begin = x_begin,
@@ -32,7 +32,7 @@ struct panel *panel_create(unsigned x_begin,
       continue;
     }
 
-    panel->assests[idx] = asset;
+    panel->assets[idx] = asset;
     idx++;
   }
 
@@ -44,21 +44,20 @@ struct panel *panel_create(unsigned x_begin,
 struct panel *panel_add_assets(struct panel *restrict panel, size_t assets_amount, ...) {
   if (!panel) return NULL;
 
-  size_t old_assests_amount = panel->assets_amount;
-  struct panel *expanded =
-    realloc(panel, sizeof *panel * (assets_amount + old_assests_amount) * sizeof *panel->assests);
+  size_t old_assets_amount = panel->assets_amount;
+  struct panel *expanded = realloc(panel, sizeof *panel * (assets_amount + old_assets_amount) * sizeof *panel->assets);
   if (!expanded) return panel;
 
   va_list args;
   va_start(args, assets_amount);
 
   for (size_t i = 0; i < assets_amount; i++) {
-    expanded->assests[i + old_assests_amount] = va_arg(args, Tigr *);
+    expanded->assets[i + old_assets_amount] = va_arg(args, Tigr *);
   }
 
   va_end(args);
 
-  expanded->assets_amount = old_assests_amount + assets_amount;
+  expanded->assets_amount = old_assets_amount + assets_amount;
   return expanded;
 }
 
@@ -66,8 +65,11 @@ void panel_destroy(struct panel *restrict panel) {
   if (!panel) return;
 
   for (size_t i = 0; i < panel->assets_amount; i++) {
-    tigrFree(panel->assests[i]);
+    tigrFree(panel->assets[i]);
   }
+
+  if (panel->properties.font) tigrFreeFont(panel->properties.font);
+
   free(panel);
 }
 
