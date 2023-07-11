@@ -1,28 +1,29 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
-
+#include "assets.h"
 #include "board.h"
-#include "game_properties.h"
+#include "game.h"
+#include "mouse_event.h"
 #include "panel.h"
+#include "tigr.h"
 #include "window.h"
 
-unsigned cell_row(int y, int y_begin, size_t spacing, size_t cell_size, size_t offset);
+unsigned calculate_width(struct board const *restrict board);
 
-unsigned cell_col(int x, int x_begin, size_t spacing, size_t cell_size, size_t offset);
+unsigned calculate_height(struct board const *restrict board);
 
-unsigned cell_x_coord(unsigned col, unsigned x_begin, size_t spacing, size_t cell_size, size_t offset);
+TigrFont *load_font(char const *restrict font_path);
 
-unsigned cell_y_coord(unsigned row, unsigned y_begin, size_t spacing, size_t cell_size, size_t offset);
+struct assets_manager *create_assets(struct assets_manager *am);
 
-void reveal_all_mines(struct board *restrict board);
+bool create_panels(struct panel **restrict panels, size_t size, unsigned width, unsigned height);
 
-void on_mouse_click(struct window *restrict window, struct game *restrict game, int x, int y, int buttons);
+void reveal_mines(struct board *restrict board);
 
-struct game game_create(enum difficulty difficulty);
+void on_mouse_click(struct window *restrict window, struct game *restrict game, struct mouse_event mouse_event);
 
-void game_destroy(struct game *restrict game);
+void on_mouse_hover(struct window *restrict window, struct game *restrict game, struct mouse_event mouse_event);
 
-enum game_state init_new_game(struct game *restrict game, enum difficulty difficulty);
-
-struct panel *create_difficulties_assets(struct panel *restrict navbar);
+void alert(TigrFont *restrict font, char const *fmt, ...);

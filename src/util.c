@@ -1,365 +1,129 @@
 #include "util.h"
-#include <stdlib.h>
-#include <time.h>
-#include "window.h"
-#ifdef MS_DEBUG
+#include <stdarg.h>
 #include <stdio.h>
-#endif
+#include "colors.h"
+#include "properties.h"
 
-#define LMB(X) ((X)&1)
-#define RMB(X) ((X)&2)
-#define MMB(X) ((X)&4)
+#define ALERT_WIDTH 300
+#define ALERT_HEIGHT 200
 
-// get the row of a cell based on its y position
-unsigned cell_row(int y, int y_begin, size_t spacing, size_t cell_size, size_t offset) {
-  return (y - y_begin - offset) / (cell_size + spacing);
+static inline char *vsprintf_wrapper(char *buf, size_t size, char const *fmt, va_list args) {
+  if (!buf || !size) return NULL;
+
+  va_list args_cpy;
+  va_copy(args_cpy, args);
+
+  int required_size = vsnprintf(NULL, 0, fmt, args);
+  va_end(args_cpy);
+
+  if (required_size + 1 >= (int)size) { return NULL; }
+
+  vsprintf(buf, fmt, args);
+  return buf;
 }
 
-// get the column of a cell based on its x potision
-unsigned cell_col(int x, int x_begin, size_t spacing, size_t cell_size, size_t offset) {
-  return (x - x_begin - offset) / (cell_size + spacing);
-}
+static inline char *sprintf_wrapper(char *buf, size_t size, char const *fmt, ...) {
+  if (!buf || !size) return NULL;
 
-/* returns the left most x position of a cell based on its index */
-unsigned cell_x_coord(unsigned col, unsigned x_begin, size_t spacing, size_t cell_size, size_t offset) {
-  return col * (spacing + cell_size) + x_begin + offset;
-}
+  va_list args;
+  va_start(args, fmt);
 
-/* returns the top most y position of a cell based on its index */
-unsigned cell_y_coord(unsigned row, unsigned y_begin, size_t spacing, size_t cell_size, size_t offset) {
-  return row * (spacing + cell_size) + y_begin + offset;
-}
-
-size_t difficulty_index(enum difficulty difficulty) {
-  return (unsigned)difficulty >> OCTET * 3;
-}
-
-// get the cell at position (x,y) on the panel
-static inline struct cell *get_cell(struct board *restrict board,
-                                    unsigned x,
-                                    unsigned y,
-                                    struct panel const *restrict panel,
-                                    Tigr const *restrict bmp) {
-  if (!board || !panel) return NULL;
-
-  if (x < x_begin(panel, bmp->w) || x > x_begin(panel, bmp->w) + panel->width) return NULL;
-  if (y < panel->y_begin || y > panel->y_begin + panel->height) return NULL;
-
-  /**
-   * each row contains: col_mines * (cell_size + spacing) > x.end - x.begin
-   * x = j * (cell_size + spacing) + x.begin + spacing / 2
-   *
-   * inverse:
-   * x - offset - x.begin = j * (spacing + cell_size)
-   * (x - offset - x.begin) / (spacing + cell_size) = j
-   *
-   * same goes for y:
-   * row_mines * (cell_size + spacing) > y.end - y.begin
-   * y = i * (cell_size + spacing) + y.begin + spacing / 2
-   *
-   * inverse:
-   * y - offset - y.begin = i * (spacing + cell_size)
-   * (y - offset - y.begin) / (spacing + cell size) = i
-   */
-
-  size_t offset = panel->properties.spacing / 2;
-  size_t row = cell_row(y, panel->y_begin, panel->properties.spacing, panel->properties.cell_size, offset);
-  size_t col = cell_col(x, x_begin(panel, bmp->w), panel->properties.spacing, panel->properties.cell_size, offset);
-
-  if (y > cell_y_coord(row, panel->y_begin, panel->properties.spacing, panel->properties.cell_size, offset) +
-            panel->properties.cell_size) {
+  if (!vsprintf_wrapper(buf, size, fmt, args)) {
+    va_end(args);
     return NULL;
   }
 
-  if (x > cell_y_coord(col, x_begin(panel, bmp->w), panel->properties.spacing, panel->properties.cell_size, offset) +
-            panel->properties.cell_size) {
-    return NULL;
+  va_end(args);
+  return buf;
+}
+
+unsigned calculate_width(struct board const *restrict board) {
+  return board_cols(board) * TILE_SIZE + LEFT_MARGIN + RIGHT_MARGIN;
+}
+
+unsigned calculate_height(struct board const *restrict board) {
+  return board_rows(board) * TILE_SIZE + HEIGHT_NAV_PANE + HEIGHT_STAT_PANE;
+}
+
+TigrFont *load_font(char const *restrict font_path) {
+  if (!font_path) return NULL;
+
+  Tigr *font_png = tigrLoadImage(font_path);
+  if (!font_png) return NULL;
+
+  return tigrLoadFont(font_png, TCP_ASCII);
+}
+
+struct assets_manager *create_assets(struct assets_manager *am) {
+  if (!am) return NULL;
+
+  for (size_t i = ASSET_ONE; i < ASSET_EIGHT + 1; i++) {
+    Tigr *bmp = tigrBitmap(TILE_SIZE, TILE_SIZE);
+    if (!bmp) return am;
+
+    am = am_push(am, &(struct asset){.id = (int)i, .bmp = bmp});
   }
 
-  return board_get_cell(board, row, col);
+  return am;
 }
 
-static inline bool reset_pressed(struct panel const *restrict top,
-                                 unsigned width,
-                                 unsigned height,
-                                 unsigned x,
-                                 unsigned y) {
-  if (!top) return false;
-
-  Tigr *cell_background = top->assets[top->assets_amount - 1];
-
-  // asset/cell should always be at index `assets_amount - 1`
-  return x >= x_begin(top, width) - cell_background->w / 2 + top->width / 2 &&
-         x <= x_begin(top, width) + cell_background->w / 2 + top->width / 2 &&
-         y >= y_begin(top, height) - cell_background->h / 2 && y <= y_begin(top, height) + cell_background->h / 2;
+// TODO: complete the creation of each individual panel
+bool create_panels(struct panel **restrict panels, size_t size, unsigned width, unsigned height) {
+  (void)panels;
+  (void)size;
+  (void)width;
+  (void)height;
+  return false;
 }
 
-int panel_index(unsigned x, unsigned y, struct window *restrict window) {
-  for (size_t i = 0; i < window->panels_amount; i++) {
-    struct panel *current = window->panels[i];
-
-    if (x >= x_begin(current, window->bmp->w) && x <= x_begin(current, window->bmp->w) + current->width &&
-        y >= current->y_begin && y <= current->y_begin + current->height) {
-      return i;
-    }
-  }
-
-  return -1;
-}
-
-void reveal_all_mines(struct board *restrict board) {
+void reveal_mines(struct board *restrict board) {
   if (!board) return;
 
   for (size_t row = 0; row < board_rows(board); row++) {
     for (size_t col = 0; col < board_cols(board); col++) {
-      struct cell *cell = board_get_cell(board, row, col);
-      if (cell && cell->mine) cell->revealed = true;
+      struct cell *current = board_cell(board, row, col);
+      if (!current) continue;
+
+      if (current->mine) current->revealed = true;
     }
   }
 }
 
-static inline size_t sum_adjacent_flags(struct cell const *restrict cells,
-                                        size_t row,
-                                        size_t col,
-                                        size_t rows,
-                                        size_t cols) {
-  size_t prev_row = row - 1;
-  size_t last_row = row + 1;
-  size_t prev_col = col - 1;
-  size_t last_col = col + 1;
+void on_mouse_click(struct window *restrict window, struct game *restrict game, struct mouse_event mouse_event);
 
-  if (row == 0) { prev_row = row; }
-  if (row == rows - 1) { last_row = row; }
+void on_mouse_hover(struct window *restrict window, struct game *restrict game, struct mouse_event mouse_event);
 
-  if (col == 0) { prev_col = col; }
-  if (col == cols - 1) { last_col = col; }
+void alert(TigrFont *restrict font, char const *fmt, ...) {
+  if (!font) font = tfont;
 
-  size_t adjacent_flags = 0;
-  for (size_t curr_row = prev_row; curr_row <= last_row; curr_row++) {
-    for (size_t curr_col = prev_col; curr_col <= last_col; curr_col++) {
-      if (cells[curr_row * cols + curr_col].flagged) adjacent_flags++;
-    }
-  }
-  return adjacent_flags;
-}
+  enum local_str_size {
+    STR_SIZE = 256,
+  };
+  char buf[STR_SIZE];
 
-static inline void reveal_next_cell(struct board *restrict board, int row, int col, enum game_state *state) {
-  if (!board || !board->cells) return;
+  va_list args;
+  va_start(args, fmt);
 
-  if (!state || *state == STATE_LOST) return;
-
-  // boundry check
-  int rows = board_rows(board);
-  int cols = board_cols(board);
-  if (row < 0 || row >= rows) return;
-  if (col < 0 || col >= cols) return;
-
-  struct cell *current_cell = board_get_cell(board, row, col);
-  if (!current_cell) return;
-  if (current_cell->revealed || current_cell->flagged) return;
-
-  board_reveal_cell(board, row, col);
-  if (current_cell->mine) *state = STATE_LOST;
-
-  size_t adjacent_flags = sum_adjacent_flags(board->cells, row, col, rows, cols);
-  if (adjacent_flags < current_cell->adjacent_mines) return;
-
-  // try to go up
-  reveal_next_cell(board, row - 1, col, state);
-  // try to go top right
-  reveal_next_cell(board, row - 1, col + 1, state);
-  // try to go right
-  reveal_next_cell(board, row, col + 1, state);
-  // try to go bottom right
-  reveal_next_cell(board, row + 1, col + 1, state);
-  // try to go down
-  reveal_next_cell(board, row + 1, col, state);
-  // try to go bottom left
-  reveal_next_cell(board, row + 1, col - 1, state);
-  // try to go left
-  reveal_next_cell(board, row, col - 1, state);
-  // try to go top left
-  reveal_next_cell(board, row - 1, col - 1, state);
-}
-
-static inline bool menu_pressed(struct panel const *restrict panel,
-                                unsigned width,
-                                unsigned height,
-                                unsigned x,
-                                unsigned y) {
-  if (!panel) return false;
-
-  // button should always be at index 0
-  Tigr *button = panel->assets[0];
-  return x >= x_begin(panel, width) && x <= x_begin(panel, width) + button->w &&
-         y >= y_begin(panel, height) - button->h / 2 && y <= y_begin(panel, height) + button->h / 2;
-}
-
-void on_mouse_click(struct window *restrict window, struct game *restrict game, int x, int y, int buttons) {
-  if (!window || !game) return;
-
-  if (!buttons) return;
-
-  // prevent the case of 'holding mouse down'
-  if (game->prev_event == MOUSE_DOWN) return;
-
-  if (window->navbar_toggled) {
-    window->navbar_toggled = false;
+  if (!vsprintf_wrapper(buf, sizeof buf, fmt, args)) {
+    vprintf(fmt, args);
+    va_end(args);
     return;
   }
 
-  enum panels p_idx = panel_index(x, y, window);
-#ifdef MS_DEBUG
-  printf("panel: %d (x: %d, y: %d)\n", p_idx, x, y);
-#endif
-
-  switch (p_idx) {
-    case P_NAVBAR: {
-      if (LMB(buttons) && menu_pressed(window->panels[p_idx], window->bmp->w, window->bmp->h, x, y)) {
-#ifdef MS_DEBUG
-        printf("hit!\n");
-#endif
-        window->navbar_toggled = !window->navbar_toggled;
-      }
-      // enum difficulty new_difficulty = difficulties[(difficulty_index(game->board.difficulty) + 1) %
-      // MS_DIFFICULTIES]; game->game_state = init_new_game(game, new_difficulty);
-
-      // window_resize(window,
-      //               calculate_window_width(&game->board),
-      //               calculate_window_height(&game->board),
-      //               "minesweeper",
-      //               TIGR_AUTO | TIGR_2X);
-
-    } break;
-    case P_TOP:
-      if (LMB(buttons) && reset_pressed(window->panels[p_idx], window->bmp->w, window->bmp->h, x, y)) {
-        game->game_state = init_new_game(game, game->difficulty);
-      }
-      break;
-    case P_MAIN: {
-      if (game->game_state != STATE_PLAYING) { return; }
-
-      struct cell *current_cell = get_cell(&game->board, x, y, window->panels[P_MAIN], window->bmp);
-      if (!current_cell) return;
-
-      struct panel *panel = window->panels[P_MAIN];
-      size_t offset = panel->properties.spacing / 2;
-      size_t row = cell_row(y, panel->y_begin, panel->properties.spacing, panel->properties.cell_size, offset);
-      size_t col =
-        cell_col(x, x_begin(panel, window->bmp->w), panel->properties.spacing, panel->properties.cell_size, offset);
-
-      if (MMB(buttons)) {  // click on a revealed cell
-        if (!current_cell->revealed) return;
-
-        // discover all cells in range
-        // questionable _at best_ but hey! it works!
-        game->board.revealed_cells--;
-        current_cell->revealed = false;
-        reveal_next_cell(&game->board, row, col, &game->game_state);
-      } else if (LMB(buttons)) {
-        if (current_cell->flagged) { return; }
-
-        if (current_cell->mine) { game->game_state = STATE_LOST; }
-
-        if (!current_cell->mine && !current_cell->adjacent_mines) {  // cell has a numeric value of 0
-          reveal_next_cell(&game->board, row, col, &game->game_state);
-        } else {
-          board_reveal_cell(&game->board, row, col);
-        }
-
-      } else if (RMB(buttons)) {
-        current_cell->flagged = !current_cell->flagged;
-        current_cell->flagged ? game->mines_counter-- : game->mines_counter++;
-      }
-
-      // check win condition
-      if (board_revealed_cells(&game->board) && game->game_state == STATE_PLAYING) {
-        game->game_state = STATE_WON;
-        game->mines_counter = 0;
-      }
-    } break;
-    default:
-      break;
-  }
-}
-
-struct game game_create(enum difficulty difficulty) {
-  struct board board;
-  if (!board_create(&board, difficulty)) { return (struct game){.game_state = STATE_INVALID_STATE}; }
-
-  return (
-    struct game){.board = board, .game_clock = {-1, -1}, .difficulty = difficulty, .game_state = STATE_INVALID_STATE};
-}
-
-void game_destroy(struct game *restrict game) {
-  if (!game) return;
-  board_destroy(&game->board);
-}
-
-enum game_state init_new_game(struct game *restrict game, enum difficulty difficulty) {
-  if (!game) return STATE_INVALID_STATE;
-
-  if (!board_init(&game->board, difficulty)) {
-    game->game_state = STATE_INVALID_STATE;
-    return STATE_INVALID_STATE;
+  Tigr *alert_window = tigrWindow(ALERT_WIDTH, ALERT_HEIGHT, "Alert", TIGR_AUTO | TIGR_2X);
+  if (!alert_window) {
+    printf("%s\n", buf);
+    return;
   }
 
-  /**
-   * game::prev_event are initialized in game_create
-   */
-  game->game_clock = (struct game_clock){.start = time(NULL), .end = (time_t)-1};
-  game->game_state = STATE_PLAYING;
-  game->prev_event = MOUSE_UP;
-  game->difficulty = difficulty;
-  game->mines_counter = board_get_mines_amount(&game->board);
+  unsigned x = alert_window->w / 2 - tigrTextWidth(font, buf) / 2;
+  unsigned y = alert_window->h / 2 - tigrTextHeight(font, buf) / 2;
+  tigrPrint(alert_window, font, x, y, tigrRGB(RED), buf);
 
-  return STATE_PLAYING;
-}
-
-static inline char const *difficulty_as_str(enum difficulty difficulty) {
-  switch (difficulty) {
-    case MS_CLASSIC:
-      return "classic";
-    case MS_ADVANCED:
-      return "advanced";
-    case MS_EXPERT:
-      return "expert";
-    default:
-      return "custom";
-  }
-}
-
-static inline unsigned max_width_difficulty(enum difficulty const *restrict difficulties,
-                                            size_t amount,
-                                            TigrFont *restrict font) {
-  unsigned max = 0;
-  for (size_t i = 0; i < amount; i++) {
-    unsigned width = tigrTextWidth(font, difficulty_as_str(difficulties[i]));
-    if (width > max) max = width;
-  }
-  return max;
-}
-
-struct panel *create_difficulties_assets(struct panel *restrict navbar) {
-  enum difficulty difficulties[] = {MS_CLASSIC, MS_ADVANCED, MS_EXPERT};
-  size_t difficulties_amount = sizeof difficulties / sizeof *difficulties;
-
-  TigrFont *font = navbar->properties.font ? navbar->properties.font : tfont;
-
-  unsigned width = max_width_difficulty(difficulties, difficulties_amount, font);
-  unsigned text_height = tigrTextHeight(font, difficulty_as_str(*difficulties));
-
-  Tigr *menu = tigrBitmap(width, difficulties_amount * (text_height + navbar->properties.spacing));
-  if (!menu) return navbar;
-
-  tigrClear(menu, tigrRGBA(BOARD_COLORS));
-  tigrFill(menu, 0, 0, menu->w, menu->h, tigrRGBA(BOARD_COLORS));
-
-  for (size_t i = 0; i < difficulties_amount; i++) {
-    char const *difficulty_str = difficulty_as_str(difficulties[i]);
-
-    tigrPrint(menu, font, 0, i * text_height, tigrRGB(0, 0, 0), difficulty_str);
+  while (!tigrClosed(alert_window) || !tigrKeyDown(alert_window, TK_ESCAPE)) {
+    tigrClear(alert_window, tigrRGBA(BOARD_COLOR));
+    tigrUpdate(alert_window);
   }
 
-  return panel_add_assets(navbar, 1, menu);
+  tigrFree(alert_window);
 }

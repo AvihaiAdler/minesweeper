@@ -5,10 +5,8 @@ add_executable(minesweeper)
 
 target_sources(minesweeper PRIVATE
   src/main.c
+  src/game.c
   src/util.c
-  src/board.c
-  src/panel.c
-  src/window.c
 )
 
 option(DEBUG "turn on for debug layout" OFF)
@@ -38,12 +36,17 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 target_link_libraries(minesweeper PRIVATE
-  tigr
+  # tigr
+  graphics
+  board
 )
 
 target_include_directories(minesweeper PRIVATE
-  lib
+  lib/graphics
+  lib/board
   include
 )
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/lib)
+add_subdirectory(${CMAKE_SOURCE_DIR}/lib/tigr)
+add_subdirectory(${CMAKE_SOURCE_DIR}/lib/graphics)
+add_subdirectory(${CMAKE_SOURCE_DIR}/lib/board)
