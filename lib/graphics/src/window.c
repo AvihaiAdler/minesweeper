@@ -31,7 +31,7 @@ struct window *window_create(unsigned width,
   return window;
 }
 
-struct window *window_add(struct window *restrict window, size_t panels, ...) {
+struct window *window_push(struct window *restrict window, size_t panels, ...) {
   if (!window) return NULL;
 
   size_t old_panels = window->panels_amount;
@@ -48,6 +48,17 @@ struct window *window_add(struct window *restrict window, size_t panels, ...) {
 
   va_end(args);
   return resized;
+}
+
+struct panel *window_pop(struct window *restrict window) {
+  if (!window) return NULL;
+
+  if (window->panels_amount) {
+    window->panels_amount--;
+    return window->panels[window->panels_amount];
+  }
+
+  return NULL;
 }
 
 void window_destroy(struct window *restrict window) {
@@ -96,6 +107,8 @@ void window_draw(struct window *restrict window, float alpha) {
                   current->bmp->h,
                   alpha);
   }
+
+  tigrUpdate(window->window);
 }
 
 void window_clear(struct window *restrict window, TPixel color) {

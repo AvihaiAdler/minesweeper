@@ -1,10 +1,6 @@
 #pragma once
 
 /**
- * @brief represets mouse events
- */
-
-/**
  * @brief represents mouse buttons
  */
 enum mouse_button {
@@ -20,16 +16,11 @@ enum mouse_button {
 struct mouse_event {
   enum mouse_button button;
 
-  unsigned x;
-  unsigned y;
+  int x;
+  int y;
 };
 
 /**
  * @brief processes _one_ mouse event. isn't capable to process multiple key presses
- *
- * @param x
- * @param y
- * @param buttons
- * @return struct mouse_event
  */
 struct mouse_event mouse_event_create(unsigned x, unsigned y, unsigned buttons);
