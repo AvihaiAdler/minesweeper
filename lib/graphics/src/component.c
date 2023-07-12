@@ -64,6 +64,12 @@ push_end:
   return component;
 }
 
+void component_pop(struct component *restrict component) {
+  if (!component) return;
+
+  if (component->size) component->size--;
+}
+
 void component_remove(struct component *restrict component, int id) {
   if (!component) return;
 
@@ -97,31 +103,3 @@ unsigned component_height(struct component const *restrict component) {
 
   return height;
 }
-
-// struct component component_create(unsigned id,
-//                                   unsigned x,
-//                                   unsigned y,
-//                                   Tigr const *restrict bmp,
-//                                   enum alignment alignment) {
-//   return (struct component){.id = id, .x_offset = x, .y_offset = y, .alignment = alignment, .bmp = bmp};
-// }
-
-// void component_bmp(struct component *restrict component, Tigr const *restrict bmp) {
-//   if (!component) return;
-
-//   component->bmp = bmp;
-// }
-
-// void component_blit(struct component *restrict component, Tigr *bmp, float alpha) {
-//   if (!component || !component->bmp) return;
-
-//   if (!bmp) return;
-
-//   tigrBlitAlpha(component->bmp, bmp, 0, 0, 0, 0, -1, -1, alpha);
-// }
-
-// void component_clear(struct component *restrict component, TPixel color) {
-//   if (!component || !component->bmp) return;
-
-//   tigrClear(component->bmp, color);
-// }

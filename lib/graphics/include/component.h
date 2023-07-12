@@ -42,6 +42,11 @@ void component_destroy(struct component *restrict component);
 struct component *component_push(struct component *restrict component, struct asset *restrict asset);
 
 /**
+ * @brief pops the last asset from the component
+ */
+void component_pop(struct component *restrict component);
+
+/**
  * @brief removes an asset with the id `id` from a component
  */
 void component_remove(struct component *restrict component, int id);
