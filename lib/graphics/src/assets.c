@@ -33,7 +33,7 @@ struct assets_manager *am_create(size_t count, ...) {
     Tigr *bmp = tigrLoadImage(asset_path);
     if (!bmp) continue;
 
-    assets->assets[i] = (struct asset){.id = id, .bmp = bmp};
+    assets->assets[i] = (struct asset){.id = id, .ref_count = 0, .bmp = bmp};
     id++;
   }
 
@@ -65,14 +65,16 @@ static inline bool resize(struct assets_manager *restrict *assets_manager) {
   return true;
 }
 
-struct assets_manager *am_push(struct assets_manager *restrict assets_manager, struct asset *restrict asset) {
-  if (!assets_manager || !asset) goto push_end;
+struct assets_manager *am_push(struct assets_manager *restrict assets_manager, struct asset asset) {
+  if (!assets_manager) goto push_end;
 
   if (assets_manager->capacity <= assets_manager->size) {
     if (!resize(&assets_manager)) goto push_end;
   }
 
-  assets_manager->assets[assets_manager->size] = *asset;
+  if (asset.id == -1) asset.id = assets_manager->size;
+
+  assets_manager->assets[assets_manager->size] = asset;
   assets_manager->size++;
 
 push_end:
@@ -83,6 +85,8 @@ void am_pop(struct assets_manager *restrict assets_manager) {
   if (!assets_manager) return;
 
   if (assets_manager->size) assets_manager->size--;
+
+  asset_destroy(&assets_manager->assets[assets_manager->size]);
 }
 
 void am_remove(struct assets_manager *restrict assets_manager, int id) {
@@ -92,6 +96,7 @@ void am_remove(struct assets_manager *restrict assets_manager, int id) {
     if (assets_manager->assets[i].id == id) {
       asset_destroy(&assets_manager->assets[i]);
       assets_manager->assets[i] = assets_manager->assets[assets_manager->size - 1];
+
       assets_manager->size--;
       break;
     }
@@ -105,9 +110,51 @@ struct asset *am_get(struct assets_manager *restrict assets_manager, int id) {
   for (size_t i = 0; i < assets_manager->size; i++) {
     if (assets_manager->assets[i].id == id) {
       needle = &assets_manager->assets[i];
+      needle->ref_count++;
       break;
     }
   }
 
   return needle;
+}
+
+struct asset *am_get_at(struct assets_manager *restrict assets_manager, unsigned index) {
+  if (!assets_manager || !assets_manager->size) return NULL;
+
+  if (index >= assets_manager->size) return NULL;
+
+  assets_manager->assets[index].ref_count++;
+  return &assets_manager->assets[index];
+}
+
+struct asset *am_get_free(struct assets_manager *restrict assets_manager, int id) {
+  if (!assets_manager) return NULL;
+
+  struct asset *needle = NULL;
+  for (size_t i = 0; i < assets_manager->size; i++) {
+    if (assets_manager->assets[i].id == id && !assets_manager->assets[i].ref_count) {
+      needle = &assets_manager->assets[i];
+      needle->ref_count++;
+      break;
+    }
+  }
+
+  return needle;
+}
+
+void am_return(struct assets_manager *restrict assets_manager, struct asset *restrict asset) {
+  if (!assets_manager || !asset) return;
+
+  // make sure the returned asset is actually tracked
+  struct asset *tmp = am_get(assets_manager, asset->id);
+  if (!tmp) {
+    asset_destroy(asset);
+    return;
+  }
+
+  if (tmp->ref_count) tmp->ref_count--;
+}
+
+struct asset asset_create(int id, Tigr *restrict bmp) {
+  return (struct asset){.id = id, .ref_count = 0, .bmp = bmp};
 }
