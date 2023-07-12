@@ -24,7 +24,12 @@ struct component {
 /**
  * @brief creates a component. if count isn't 0 expects a list of struct asset *
  */
-struct component *component_create(unsigned id, unsigned x, unsigned y, enum alignment alignment, size_t count, ...);
+struct component *component_create(unsigned id,
+                                   unsigned x_offset,
+                                   unsigned y_offset,
+                                   enum alignment alignment,
+                                   size_t count,
+                                   ...);
 
 /**
  * @brief destroys a component. _doesn't_ destroy the assets a component holds

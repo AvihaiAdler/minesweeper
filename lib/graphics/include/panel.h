@@ -26,8 +26,8 @@ struct panel {
  * @brief creates a panel with/out components. if `components` isn't 0 - expects a list of struct component *
  */
 struct panel *panel_create(unsigned id,
-                           unsigned x,
-                           unsigned y,
+                           unsigned x_offset,
+                           unsigned y_offset,
                            enum alignment alignment,
                            unsigned width,
                            unsigned height,
