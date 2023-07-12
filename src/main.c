@@ -30,7 +30,7 @@ int main(void) {
     goto font_cleanup;
   }
 
-  am = create_assets(am);
+  am = create_assets(am, font);
   if (am->size == ASSET_AMOUNT) {
     alert(font, "failed to create game assets");
     goto assets_cleanup;
@@ -54,7 +54,7 @@ int main(void) {
 
   // panels
   struct panel *panels[PANEL_AMOUNT] = {0};
-  if (!create_panels(panels, PANEL_AMOUNT, window_width, window_height)) {
+  if (!create_panels(panels, sizeof panels, am, &game, font, window_width, window_height)) {
     alert(font, "failed to create window's panels");
     goto window_cleanup;
   }

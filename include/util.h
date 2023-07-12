@@ -16,9 +16,15 @@ unsigned calculate_height(struct board const *restrict board);
 
 TigrFont *load_font(char const *restrict font_path);
 
-struct assets_manager *create_assets(struct assets_manager *am);
+struct assets_manager *create_assets(struct assets_manager *restrict am, TigrFont *restrict font);
 
-bool create_panels(struct panel **restrict panels, size_t size, unsigned width, unsigned height);
+bool create_panels(struct panel **restrict panels,
+                   size_t size,
+                   struct assets_manager *restrict am,
+                   struct game *restrict game,
+                   TigrFont *restrict font,
+                   size_t width,
+                   size_t height);
 
 void reveal_mines(struct board *restrict board);
 
