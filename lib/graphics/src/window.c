@@ -44,6 +44,7 @@ struct window *window_push(struct window *restrict window, size_t panels, ...) {
 
   for (size_t i = old_panels; i < old_panels + panels; i++) {
     resized->panels[i] = va_arg(args, struct panel *);
+    resized->panels_amount++;
   }
 
   va_end(args);
@@ -69,6 +70,8 @@ void window_destroy(struct window *restrict window) {
   for (size_t i = 0; i < window->panels_amount; i++) {
     panel_destroy(window->panels[i]);
   }
+
+  free(window);
 }
 
 // window, panel and both window::window and panel::bmp must not be NULL

@@ -49,8 +49,9 @@ struct panel *panel_add(struct panel *restrict panel, size_t components, ...) {
   va_list args;
   va_start(args, components);
 
-  for (size_t i = old_components; i < components; i++) {
+  for (size_t i = old_components; i < old_components + components; i++) {
     resized->components[i] = va_arg(args, struct component *);
+    resized->components_amount++;
   }
 
   va_end(args);
@@ -65,6 +66,8 @@ void panel_destroy(struct panel *restrict panel) {
   for (size_t i = 0; i < panel->components_amount; i++) {
     component_destroy(panel->components[i]);
   }
+
+  free(panel);
 }
 
 // panel, component and their internal bmps must not be NULL
