@@ -19,7 +19,7 @@ static inline char *vsprintf_wrapper(char *buf, size_t size, char const *fmt, va
   va_list args_cpy;
   va_copy(args_cpy, args);
 
-  int required_size = vsnprintf(NULL, 0, fmt, args);
+  int required_size = vsnprintf(NULL, 0, fmt, args_cpy);
   va_end(args_cpy);
 
   if (required_size + 1 >= (int)size) { return NULL; }
@@ -161,7 +161,7 @@ static inline struct panel *create_navbar(struct assets_manager *restrict am, si
   struct component *humburger = component_create(0, 0, 0, ALIGN_LEFT, 1, am_get_at(am, ASSET_HUMBURGER));
   if (!humburger) return NULL;
 
-  return panel_create(PANEL_NAVBAR, LEFT_MARGIN, 0, ALIGN_CENTER, width, height, 1, humburger);
+  return panel_create(PANEL_NAVBAR, 0, 0, ALIGN_CENTER, width, height, 1, humburger);
 }
 
 // assumes component creation never fails
@@ -170,9 +170,9 @@ static inline struct panel *create_stats_panel(struct assets_manager *restrict a
 
   return panel_create(
     PANEL_STATS,
-    LEFT_MARGIN,
+    0,
     HEIGHT_NAV_PANE,
-    ALIGN_LEFT,
+    ALIGN_CENTER,
     width,
     height,
     3,
@@ -189,17 +189,18 @@ static inline struct panel *create_main_panel(struct assets_manager *restrict am
   if (!am || !game) return NULL;
 
   struct panel *panel =
-    panel_create(PANEL_BOARD, LEFT_MARGIN, HEIGHT_NAV_PANE + HEIGHT_STAT_PANE, ALIGN_CENTER, width, height, 0);
+    panel_create(PANEL_BOARD, 0, HEIGHT_NAV_PANE + HEIGHT_STAT_PANE, ALIGN_CENTER, width, height, 0);
   if (!panel) return NULL;
 
+  unsigned offset = 0;  // (panel->bmp->w - board_cols(&game->board) * TILE_SIZE) / 2;
   for (size_t row = 0; row < board_rows(&game->board); row++) {
     for (size_t col = 0; col < board_cols(&game->board); col++) {
       unsigned pos = row * board_cols(&game->board) + col;
 
-      struct component *cell =
-        component_create(pos, col * TILE_SIZE, row * TILE_SIZE, ALIGN_LEFT, 1, am_get_at(am, ASSET_TILE));
-
-      panel = panel_add(panel, 1, cell);
+      panel = panel_add(
+        panel,
+        1,
+        component_create(pos, col * TILE_SIZE + offset, row * TILE_SIZE, ALIGN_LEFT, 1, am_get_at(am, ASSET_TILE)));
     }
   }
 
@@ -261,14 +262,14 @@ bool create_panels(struct panel **restrict panels,
                    struct assets_manager *restrict am,
                    struct game *restrict game,
                    TigrFont *restrict font,
-                   size_t width,
-                   size_t height) {
+                   size_t width) {
   if (!panels) return false;
 
-  panels[PANEL_NAVBAR] = create_navbar(am, width, height);
-  panels[PANEL_STATS] = create_stats_panel(am, width, height);
-  panels[PANEL_BOARD] = create_main_panel(am, game, width, height);
-  panels[PANEL_MENU] = create_menu(&am, font, width, height);
+  panels[PANEL_NAVBAR] = create_navbar(am, width, HEIGHT_NAV_PANE);
+  panels[PANEL_STATS] = create_stats_panel(am, width, HEIGHT_STAT_PANE);
+  panels[PANEL_BOARD] =
+    create_main_panel(am, game, width, calculate_height(&game->board) - (HEIGHT_NAV_PANE + HEIGHT_STAT_PANE));
+  // panels[PANEL_MENU] = create_menu(&am, font, width, height);
 
   for (size_t i = 0; i < size; i++) {
     if (!panels[i]) return false;
@@ -290,9 +291,152 @@ void reveal_mines(struct board *restrict board) {
   }
 }
 
-void on_mouse_click(struct window *restrict window, struct game *restrict game, struct mouse_event mouse_event);
+void draw_clock(struct window *restrict window, struct game *restrict game, TigrFont *restrict font) {
+  if (!window || !game) return;
 
-void on_mouse_hover(struct window *restrict window, struct game *restrict game, struct mouse_event mouse_event);
+  if (!font) font = tfont;
+
+  struct panel *stats = window->panels[PANEL_STATS];
+  struct component *clock_component = stats->components[SC_CLOCK];
+
+  enum str_local_size {
+    SIZE = 64,
+  };
+  char time_as_str[SIZE] = "00:00";
+
+  double seconds = difftime(game->clock.end, game->clock.start);
+  sprintf_wrapper(time_as_str, sizeof time_as_str, "%02d:%02d", ((int)seconds / 60) % 60, (int)seconds % 60);
+
+  struct asset *asset = clock_component->assets;
+  tigrClear(asset->bmp, tigrRGBA(BOARD_COLOR));
+  tigrPrint(asset->bmp,
+            font,
+            asset->bmp->w / 2 - tigrTextWidth(font, time_as_str) / 2,
+            asset->bmp->h / 2 /*- tigrTextHeight(font, time_as_str)*/,
+            tigrRGB(RED),
+            time_as_str);
+}
+
+void draw_mines_counter(struct window *restrict window, struct game *restrict game, TigrFont *restrict font) {
+  if (!window || !game) return;
+
+  if (!font) font = tfont;
+
+  struct panel *stats = window->panels[PANEL_STATS];
+  struct component *clock_component = stats->components[SC_MINES_COUNTER];
+
+  enum str_local_size {
+    SIZE = 64,
+  };
+  char mines_count_as_str[SIZE] = "00";
+
+  sprintf_wrapper(mines_count_as_str, sizeof mines_count_as_str, "%02d", game->mines);
+
+  struct asset *asset = clock_component->assets;
+  tigrClear(asset->bmp, tigrRGBA(BOARD_COLOR));
+  tigrPrint(asset->bmp,
+            font,
+            asset->bmp->w / 2 - tigrTextWidth(font, mines_count_as_str) / 2,
+            asset->bmp->h / 2 /*- tigrTextHeight(font, mines_count_as_str)*/,
+            tigrRGB(RED),
+            mines_count_as_str);
+}
+
+void on_mouse_click(struct window *restrict window,
+                    struct game *restrict game,
+                    struct assets_manager *restrict am,
+                    struct mouse_event mouse_event) {
+  if (!window || !game) return;
+
+  if (mouse_event.button == MOUSE_NONE) {
+    component_pop(window->panels[PANEL_STATS]->components[SC_BUTTON]);
+    component_push(window->panels[PANEL_STATS]->components[SC_BUTTON], am_get_at(am, ASSET_HAPPY));
+    return;
+  }
+
+  component_pop(window->panels[PANEL_STATS]->components[SC_BUTTON]);
+  component_push(window->panels[PANEL_STATS]->components[SC_BUTTON], am_get_at(am, ASSET_SHOCK));
+
+  if (game->prev_buttons != MOUSE_NONE) return;
+
+  struct panel *clicked_panel = window_get_panel(window, mouse_event.x, mouse_event.y);
+  if (!clicked_panel) return;
+#include <string.h>
+  if (!clicked_panel) {
+    puts("null panel");
+    return;
+  }
+  switch (clicked_panel->id) {
+    case PANEL_BOARD:
+      puts("board");
+      break;
+    case PANEL_MENU:
+      puts("menu");
+      break;
+    case PANEL_NAVBAR:
+      puts("navbar");
+      break;
+    case PANEL_STATS:
+      puts("stats");
+      break;
+    default:
+      break;
+  }
+
+  struct component *clicked_componenet = window_get_component(window, mouse_event.x, mouse_event.y);
+  if (!clicked_componenet) {
+    puts("null component");
+    return;
+  }
+  if (clicked_panel->id == PANEL_STATS) {
+    switch (clicked_componenet->id) {
+      case SC_CLOCK:
+        puts("clock");
+        break;
+      case SC_MINES_COUNTER:
+        puts("mines counter");
+        break;
+      case SC_BUTTON:
+        puts("button");
+        break;
+      default:
+        break;
+    }
+  }
+
+  // reset button was clicked
+  if (clicked_panel->id == PANEL_STATS && clicked_componenet->id == SC_BUTTON) {
+    printf("reset\n");
+    enum difficulty difficulty = game->board.difficulty;
+    game_destroy(game);
+    *game = game_create(difficulty);
+
+    component_pop(window->panels[PANEL_STATS]->components[SC_BUTTON]);
+    component_push(window->panels[PANEL_STATS]->components[SC_BUTTON], am_get_at(am, ASSET_HAPPY));
+    return;
+  }
+
+  switch (game->state) {
+    case STATE_PLAYING:
+      break;
+    case STATE_WON:
+      // component_pop(window->panels[PANEL_STATS]->components[SC_BUTTON]);
+      // component_push(window->panels[PANEL_STATS]->components[SC_BUTTON], am_get_at(am, ASSET_CHAD));
+    case STATE_LOST:  // fallthrough
+      // component_pop(window->panels[PANEL_STATS]->components[SC_BUTTON]);
+      // component_push(window->panels[PANEL_STATS]->components[SC_BUTTON], am_get_at(am, ASSET_SAD));
+      break;
+    case STATE_INVALID:
+    default:  // fallthrough
+      break;
+  }
+}
+
+void on_mouse_hover(struct window *restrict window,
+                    struct game *restrict game,
+                    struct assets_manager *restrict am,
+                    struct mouse_event mouse_event) {
+}
 
 void alert(TigrFont *restrict font, char const *fmt, ...) {
   if (!font) font = tfont;
@@ -319,10 +463,10 @@ void alert(TigrFont *restrict font, char const *fmt, ...) {
 
   unsigned x = alert_window->w / 2 - tigrTextWidth(font, buf) / 2;
   unsigned y = alert_window->h / 2 - tigrTextHeight(font, buf) / 2;
+  tigrClear(alert_window, tigrRGBA(BOARD_COLOR));
   tigrPrint(alert_window, font, x, y, tigrRGB(RED), buf);
 
-  while (!tigrClosed(alert_window) || !tigrKeyDown(alert_window, TK_ESCAPE)) {
-    tigrClear(alert_window, tigrRGBA(BOARD_COLOR));
+  while (!tigrClosed(alert_window)) {
     tigrUpdate(alert_window);
   }
 
