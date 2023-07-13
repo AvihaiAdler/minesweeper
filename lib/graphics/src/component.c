@@ -15,7 +15,7 @@ struct component *component_create(unsigned id, unsigned x, unsigned y, enum ali
   struct component *component = malloc(sizeof *component * sizeof *component->assets * capacity);
   if (!component) return NULL;
 
-  *component = (struct component){.id = id, .x_offset = x, .y_offset = y, .alignment = alignment};
+  *component = (struct component){.id = id, .x_offset = x, .y_offset = y, .alignment = alignment, .capacity = capacity};
 
   va_list args;
   va_start(args, count);
