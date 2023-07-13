@@ -54,25 +54,32 @@ int main(void) {
 
   // panels
   struct panel *panels[PANEL_AMOUNT] = {0};
-  if (!create_panels(panels, sizeof panels, am, &game, font, window_width, window_height)) {
+  if (!create_panels(panels,
+                     sizeof panels / sizeof *panels - 1,
+                     am,
+                     &game,
+                     font,
+                     window_width - (LEFT_MARGIN + RIGHT_MARGIN))) {
     alert(font, "failed to create window's panels");
     goto window_cleanup;
   }
 
-  for (size_t i = 0; i < (size_t)PANEL_AMOUNT; i++) {
+  for (size_t i = 0; i < sizeof panels / sizeof *panels - 1; i++) {
     window = window_push(window, 1, panels[i]);
   }
 
-  while (!tigrClosed(window->window) || !tigrKeyDown(window->window, TK_ESCAPE)) {
+  while (!tigrClosed(window->window)) {
     int x = 0;
     int y = 0;
     int buttons = 0;
 
     tigrMouse(window->window, &x, &y, &buttons);
+
     struct mouse_event mouse_event = mouse_event_create(x, y, buttons);
 
-    on_mouse_click(window, &game, mouse_event);
-    on_mouse_hover(window, &game, mouse_event);
+    on_mouse_click(window, &game, am, mouse_event);
+    on_mouse_hover(window, &game, am, mouse_event);
+    game.prev_buttons = mouse_event.button;
 
     switch (game.state) {
       case STATE_INVALID:
@@ -87,6 +94,9 @@ int main(void) {
       default:  // fallthrough
         break;
     }
+
+    draw_clock(window, &game, NULL);
+    draw_mines_counter(window, &game, NULL);
 
     window_clear(window, tigrRGBA(BOARD_COLOR));
     window_draw(window, ALPHA);
