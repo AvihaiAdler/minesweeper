@@ -1,4 +1,5 @@
 #pragma once
+#include <stdbool.h>
 #include <time.h>
 #include "board.h"
 
@@ -15,11 +16,14 @@ struct game_clock {
 };
 
 struct game {
-  struct game_clock clock;
-
-  struct board board;
-  int mines;
   enum game_state state;
+  struct game_clock clock;
+  struct board board;
+
+  int mines;
+  int prev_buttons;  // previous mouse button
+
+  bool menu_toggled;
 };
 
 struct game game_create(enum difficulty difficulty);
