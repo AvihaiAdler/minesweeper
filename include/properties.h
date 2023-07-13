@@ -41,7 +41,7 @@ enum panels_heights {
 #define ALPHA 1.0f
 
 // font
-#define FONT_PATH "resources/font"
+#define FONT_PATH "resources/font/pixellari.png"
 
 // margin
 #define LEFT_MARGIN 20

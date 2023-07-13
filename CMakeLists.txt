@@ -21,8 +21,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     -Wall 
     -Wextra 
     -Wpedantic 
-    -g
     -Og
+    -g
     -fsanitize=address,undefined
   )
 
