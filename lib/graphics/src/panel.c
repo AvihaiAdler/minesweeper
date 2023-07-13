@@ -84,9 +84,10 @@ static inline unsigned x_component(struct panel const *restrict panel, struct co
 }
 
 // panel, component and their internal bmps must not be NULL
-// componenet is _always_ center aligned w.r.t the y axis of a panel
+// componenet is _always_ top aligned w.r.t the y axis of a panel
 static inline unsigned y_component(struct panel const *restrict panel, struct component const *restrict component) {
-  return panel->bmp->h / 2 - (component_height(component) / 2 + component->y_offset);
+  // return panel->bmp->h / 2 - (component_height(component) / 2 + component->y_offset);
+  return component->y_offset;
 }
 
 void panel_draw(struct panel *restrict panel, float alpha) {

@@ -83,7 +83,7 @@ static inline unsigned x_panel(struct window const *restrict window, struct pane
       return window->window->w - (panel->bmp->w + panel->x_offset);
     case ALIGN_CENTER:
     default:  // fallthrough
-      return window->window->w / 2 - (panel->bmp->w / 2 + panel->x_offset);
+      return window->window->w / 2 - panel->bmp->w / 2 + panel->x_offset;
   }
 }
 
@@ -109,6 +109,19 @@ void window_draw(struct window *restrict window, float alpha) {
                   current->bmp->w,
                   current->bmp->h,
                   alpha);
+
+    // #ifdef MS_DEBUG
+    TPixel color = tigrRGB(255, 0, 0);
+    switch (i) {
+      case 1:
+        color = tigrRGB(0, 255, 0);
+        break;
+      case 2:
+        color = tigrRGB(0, 0, 0);
+        break;
+    }
+    tigrRect(window->window, x_panel(window, current), y_panel(current), current->bmp->w, current->bmp->h, color);
+    // #endif
   }
 
   tigrUpdate(window->window);
@@ -140,4 +153,13 @@ struct panel *window_get_panel(struct window *restrict window, unsigned x, unsig
   }
 
   return NULL;
+}
+
+struct component *window_get_component(struct window *restrict window, unsigned x, unsigned y) {
+  if (!window || !window->window) return NULL;
+
+  struct panel *panel = window_get_panel(window, x, y);
+  if (!panel) return NULL;
+
+  return panel_get_component(panel, x - x_panel(window, panel), y - y_panel(panel));
 }

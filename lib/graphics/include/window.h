@@ -54,3 +54,5 @@ void window_clear(struct window *restrict window, TPixel color);
  * @brief returns the panel with the occupping the coordinates (x, y). if no such panel exists - returns `NULL`
  */
 struct panel *window_get_panel(struct window *restrict window, unsigned x, unsigned y);
+
+struct component *window_get_component(struct window *restrict window, unsigned x, unsigned y);
