@@ -23,13 +23,22 @@ bool create_panels(struct panel **restrict panels,
                    struct assets_manager *restrict am,
                    struct game *restrict game,
                    TigrFont *restrict font,
-                   size_t width,
-                   size_t height);
+                   size_t width);
 
 void reveal_mines(struct board *restrict board);
 
-void on_mouse_click(struct window *restrict window, struct game *restrict game, struct mouse_event mouse_event);
+void draw_clock(struct window *restrict window, struct game *restrict game, TigrFont *restrict font);
 
-void on_mouse_hover(struct window *restrict window, struct game *restrict game, struct mouse_event mouse_event);
+void draw_mines_counter(struct window *restrict window, struct game *restrict game, TigrFont *restrict font);
+
+void on_mouse_click(struct window *restrict window,
+                    struct game *restrict game,
+                    struct assets_manager *restrict am,
+                    struct mouse_event mouse_event);
+
+void on_mouse_hover(struct window *restrict window,
+                    struct game *restrict game,
+                    struct assets_manager *restrict am,
+                    struct mouse_event mouse_event);
 
 void alert(TigrFont *restrict font, char const *fmt, ...);
