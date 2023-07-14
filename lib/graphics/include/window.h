@@ -50,6 +50,8 @@ void window_draw(struct window *restrict window, float alpha);
  */
 void window_clear(struct window *restrict window, TPixel color);
 
+struct panel *window_panel_at(struct window *restrict window, unsigned idx);
+
 /**
  * @brief returns the panel with the occupping the coordinates (x, y). if no such panel exists - returns `NULL`
  */
