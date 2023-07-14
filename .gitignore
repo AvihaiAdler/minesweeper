@@ -1,4 +1,5 @@
 .vscode/*
+minesweeper/*
 build/*
 notes
 *_old.*
