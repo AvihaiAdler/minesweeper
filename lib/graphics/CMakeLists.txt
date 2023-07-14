@@ -19,16 +19,16 @@ target_link_libraries(graphics PUBLIC
   tigr
 )
 
+option(GRAPHICS_DEBUG "debug" OFF)
+if(GRAPHICS_DEBUG)
+  target_compile_definitions(graphics PRIVATE GRAPHICS_DEBUG)
+endif()
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_compile_options(graphics PRIVATE
     -Wall
     -Wextra
     -Wpedantic
-    -fsanitize=address,undefined
-  )
-
-  target_link_options(graphics PRIVATE
-    -fsanitize=address,undefined
   )
 elseif()
   target_compile_options(graphics PRIVATE
@@ -36,14 +36,4 @@ elseif()
   )
 else()
   message("unsupported system")
-endif()
-
-if(DEBUG)
-  target_compile_options(graphics PRIVATE
-    -fsanitize=address,undefined
-  )
-
-  target_link_options(graphics PRIVATE
-    -fsanitize=address,undefined
-  )
 endif()

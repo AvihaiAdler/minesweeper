@@ -21,13 +21,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     -Wall 
     -Wextra 
     -Wpedantic 
-    -Og
-    -g
-    -fsanitize=address,undefined
-  )
-
-  target_link_options(minesweeper PRIVATE
-    -fsanitize=address,undefined
   )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   target_compile_options(minesweeper PRIVATE 
@@ -36,7 +29,6 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 endif()
 
 target_link_libraries(minesweeper PRIVATE
-  # tigr
   graphics
   board
 )

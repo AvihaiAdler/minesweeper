@@ -4865,6 +4865,7 @@ void tigrFree(Tigr *bmp) {
 }
 
 void tigrError(Tigr *bmp, const char *message, ...) {
+  (void)bmp;
   char tmp[1024];
 
   va_list args;

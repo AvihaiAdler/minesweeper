@@ -6,14 +6,11 @@ struct game game_create(enum difficulty difficulty) {
   if (!board_create(&game.board, difficulty)) return game;
   if (!board_init(&game.board, difficulty)) return game;
 
-  return (struct game){
-    .state = STATE_PLAYING,
-    .clock = {time(NULL), -1},
-    .board = game.board,
-    .mines = board_mines(&game.board),
-    .prev_buttons = 0,
-    .menu_toggled = false,
-  };
+  return (struct game){.state = STATE_PLAYING,
+                       .clock = {.start = time(NULL), .end = -1},
+                       .board = game.board,
+                       .mines = board_mines(&game.board),
+                       .prev_buttons = 0};
 }
 
 struct game game_restart(struct game *restrict game, enum difficulty difficulty) {
@@ -24,10 +21,11 @@ struct game game_restart(struct game *restrict game, enum difficulty difficulty)
     return (struct game){.state = STATE_INVALID};
   }
 
-  return (struct game){.board = game->board,
-                       .clock = {time(NULL), -1},
+  return (struct game){.state = STATE_PLAYING,
+                       .clock = {.start = time(NULL), .end = -1},
+                       .board = game->board,
                        .mines = board_mines(&game->board),
-                       .state = STATE_PLAYING};
+                       .prev_buttons = 0};
 }
 
 void game_destroy(struct game *restrict game) {

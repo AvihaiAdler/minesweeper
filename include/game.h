@@ -1,5 +1,5 @@
 #pragma once
-#include <stdbool.h>
+
 #include <time.h>
 #include "board.h"
 
@@ -22,8 +22,6 @@ struct game {
 
   int mines;
   int prev_buttons;  // previous mouse button
-
-  bool menu_toggled;
 };
 
 struct game game_create(enum difficulty difficulty);

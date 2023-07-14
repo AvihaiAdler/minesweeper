@@ -9,8 +9,8 @@ enum asset_ids {
   ASSET_SAD,
   ASSET_CHAD,
   ASSET_SHOCK,
-  ASSET_AMOUNT,
-  ASSET_ZERO = ASSET_AMOUNT,
+  ASSET_LOAD_AMOUNT,
+  ASSET_ZERO = ASSET_LOAD_AMOUNT,
   ASSET_ONE,
   ASSET_TWO,
   ASSET_THREE,
@@ -22,6 +22,7 @@ enum asset_ids {
   ASSET_CLOCK,
   ASSET_MINES_COUNTER,
   ASSET_EMPTY,
+  ASSET_AMOUNT,
 };
 
 enum panels {
@@ -41,7 +42,7 @@ enum panels_heights {
 #define ALPHA 1.0f
 
 // font
-#define FONT_PATH "resources/font/pixellari.png"
+#define FONT_PATH "resources/font/retron.png"
 
 // margin
 #define LEFT_MARGIN 20

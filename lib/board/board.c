@@ -4,14 +4,14 @@
 #include <time.h>
 
 /*generates a random value between [min, max) */
-static inline int rng(int min, int max) {
+static int rng(int min, int max) {
   int range = max - (min + 1);
 
   double rand_val = rand() / (1.0 + RAND_MAX);
   return (int)(rand_val * range + min);
 }
 
-static inline struct cell cell(struct cell *cells, size_t row, size_t col, size_t rows_bound, size_t cols_bound) {
+static struct cell cell(struct cell *cells, size_t row, size_t col, size_t rows_bound, size_t cols_bound) {
   // the cell at (row, col) is a mine
   if (cells[row * cols_bound + col].mine) return cells[row * cols_bound + col];
 
@@ -36,7 +36,7 @@ static inline struct cell cell(struct cell *cells, size_t row, size_t col, size_
   return (struct cell){.adjacent_mines = adjacent_mines};
 }
 
-static inline bool set_cells_values(struct board *restrict board) {
+static bool set_cells_values(struct board *restrict board) {
   if (!board || !board->cells) return false;
 
   for (size_t row = 0; row < board_rows(board); row++) {

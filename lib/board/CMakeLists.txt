@@ -21,13 +21,3 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 else()
   message("unsupported system")
 endif()
-
-if(DEBUG)
-  target_compile_options(board PRIVATE
-    -fsanitize=address,undefined
-  )
-
-  target_link_options(board PRIVATE
-    -fsanitize=address,undefined
-  )
-endif()
