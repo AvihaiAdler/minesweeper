@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(minesweeper VERSION 0.0.1 LANGUAGES C )
+project(minesweeper VERSION 0.0.1 LANGUAGES C)
 
 add_executable(minesweeper)
 
@@ -45,7 +45,7 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/lib/board)
 
 add_custom_command(TARGET minesweeper
   POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/minesweeper
-  COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:minesweeper>  ${CMAKE_SOURCE_DIR}/minesweeper
-  COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/resources ${CMAKE_SOURCE_DIR}/minesweeper/resources
+  COMMAND ${CMAKE_COMMAND} ARGS -E make_directory ${CMAKE_SOURCE_DIR}/minesweeper
+  COMMAND ${CMAKE_COMMAND} ARGS -E copy $<TARGET_FILE:minesweeper> ${CMAKE_SOURCE_DIR}/minesweeper
+  COMMAND ${CMAKE_COMMAND} ARGS -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/resources ${CMAKE_SOURCE_DIR}/minesweeper/resources
 )
