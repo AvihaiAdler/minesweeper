@@ -36,7 +36,7 @@ void component_destroy(struct component *restrict component) {
   free(component);
 }
 
-static inline bool resize(struct component *restrict *component) {
+static bool resize(struct component *restrict *component) {
   struct component *tmp = *component;
 
   size_t capacity = tmp->capacity << GROWTH_FACTOR;
@@ -80,6 +80,12 @@ void component_remove(struct component *restrict component, int id) {
       break;
     }
   }
+}
+
+void component_clear(struct component *restrict component) {
+  if (!component) return;
+
+  component->size = 0;
 }
 
 unsigned component_width(struct component const *restrict component) {

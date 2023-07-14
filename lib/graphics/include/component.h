@@ -51,6 +51,8 @@ void component_pop(struct component *restrict component);
  */
 void component_remove(struct component *restrict component, int id);
 
+void component_clear(struct component *restrict component);
+
 /**
  * @brief returns the max width of a bitmap a component holds
  */
