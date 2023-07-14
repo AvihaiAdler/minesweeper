@@ -178,9 +178,9 @@ struct assets_manager *create_assets(struct assets_manager *restrict am, TigrFon
     if (i - ASSET_ZERO) {
       if (!sprintf_wrapper(numeral, sizeof numeral, "%d", i - ASSET_ZERO)) continue;
       tigrPrint(bmp,
-                font,
-                bmp->w / 2 - tigrTextWidth(font, numeral) / 2,
-                bmp->h / 2 - tigrTextHeight(font, numeral) / 2,
+                tfont,
+                bmp->w / 2 - tigrTextWidth(tfont, numeral) / 2,
+                bmp->h / 2 - tigrTextHeight(tfont, numeral) / 2,
                 numeric_color(i - ASSET_ZERO),
                 numeral);
     }
