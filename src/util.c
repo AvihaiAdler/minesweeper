@@ -4,8 +4,10 @@
 #include "colors.h"
 #include "properties.h"
 
-#define ALERT_WIDTH 300
+#define ALERT_WIDTH 350
 #define ALERT_HEIGHT 200
+
+static enum difficulty difficulties[] = {MS_CLASSIC, MS_ADVANCED, MS_EXPERT};
 
 enum stats_panel_components {
   SC_MINES_COUNTER,
@@ -13,7 +15,7 @@ enum stats_panel_components {
   SC_CLOCK,
 };
 
-static inline char *vsprintf_wrapper(char *buf, size_t size, char const *fmt, va_list args) {
+static char *vsprintf_wrapper(char *buf, size_t size, char const *fmt, va_list args) {
   if (!buf || !size) return NULL;
 
   va_list args_cpy;
@@ -28,7 +30,7 @@ static inline char *vsprintf_wrapper(char *buf, size_t size, char const *fmt, va
   return buf;
 }
 
-static inline char *sprintf_wrapper(char *buf, size_t size, char const *fmt, ...) {
+static char *sprintf_wrapper(char *buf, size_t size, char const *fmt, ...) {
   if (!buf || !size) return NULL;
 
   va_list args;
@@ -41,6 +43,50 @@ static inline char *sprintf_wrapper(char *buf, size_t size, char const *fmt, ...
 
   va_end(args);
   return buf;
+}
+
+static char const *difficulties_as_str(enum difficulty difficulty) {
+  switch (difficulty) {
+    case MS_CLASSIC:
+      return "classic";
+    case MS_ADVANCED:
+      return "advanced";
+    case MS_EXPERT:
+      return "expert";
+    default:
+      return "custom";
+  }
+}
+
+static void print_difficulty(Tigr *restrict bmp, TigrFont *restrict font, enum difficulty difficulty) {
+  if (!bmp) return;
+
+  if (!font) font = tfont;
+
+  tigrClear(bmp, tigrRGB(192, 192, 192));
+
+  tigrPrint(bmp, font, 0, 0, tigrRGB(BLACK), difficulties_as_str(difficulty));
+}
+
+static unsigned max_text_width(TigrFont *restrict font) {
+  enum local_str_size {
+    SIZE = 64,
+  };
+  char text[SIZE];
+
+  unsigned width = 0;
+  for (size_t i = 0; i < MS_DIFFICULTIES; i++) {
+    if (!sprintf_wrapper(text, sizeof text, "%s", difficulties_as_str(difficulties[i]))) continue;
+
+    unsigned tmp_width = tigrTextWidth(font, text);
+    if (width < tmp_width) width = tmp_width;
+  }
+
+  return width;
+}
+
+static unsigned max_text_height(TigrFont *restrict font) {
+  return tigrTextHeight(font, "a");
 }
 
 unsigned calculate_width(struct board const *restrict board) {
@@ -60,7 +106,7 @@ TigrFont *load_font(char const *restrict font_path) {
   return tigrLoadFont(font_png, TCP_ASCII);
 }
 
-static inline TPixel numeric_color(int num) {
+static TPixel numeric_color(int num) {
   switch (num) {
     case 1:
       return tigrRGB(NUMERIC_BLUE);
@@ -83,7 +129,7 @@ static inline TPixel numeric_color(int num) {
   }
 }
 
-static inline Tigr *create_clock_asset(TigrFont *restrict font) {
+static Tigr *create_clock_asset(TigrFont *restrict font) {
   enum local_str_size {
     SIZE = 64,
   };
@@ -97,7 +143,7 @@ static inline Tigr *create_clock_asset(TigrFont *restrict font) {
   return tigrBitmap(width, height > TILE_SIZE ? height : TILE_SIZE);
 }
 
-static inline Tigr *create_mines_asset(TigrFont *restrict font) {
+static Tigr *create_mines_asset(TigrFont *restrict font) {
   enum local_str_size {
     SIZE = 64,
   };
@@ -129,13 +175,27 @@ struct assets_manager *create_assets(struct assets_manager *restrict am, TigrFon
     };
     char numeral[SIZE];
 
-    if (!sprintf_wrapper(numeral, sizeof numeral, "%d", i - ASSET_ZERO)) continue;
-    tigrPrint(bmp,
-              font,
-              bmp->w / 2 - tigrTextWidth(font, numeral) / 2,
-              bmp->h / 2 - tigrTextHeight(font, numeral) / 2,
-              numeric_color(i - ASSET_ZERO),
-              numeral);
+    if (i - ASSET_ZERO) {
+      if (!sprintf_wrapper(numeral, sizeof numeral, "%d", i - ASSET_ZERO)) continue;
+      tigrPrint(bmp,
+                font,
+                bmp->w / 2 - tigrTextWidth(font, numeral) / 2,
+                bmp->h / 2 - tigrTextHeight(font, numeral) / 2,
+                numeric_color(i - ASSET_ZERO),
+                numeral);
+    }
+
+#ifdef MS_DEBUG
+    if (i - ASSET_ZERO == 0) {
+      if (!sprintf_wrapper(numeral, sizeof numeral, "%d", i - ASSET_ZERO)) continue;
+      tigrPrint(bmp,
+                font,
+                bmp->w / 2 - tigrTextWidth(font, numeral) / 2,
+                bmp->h / 2 - tigrTextHeight(font, numeral) / 2,
+                numeric_color(i - ASSET_ZERO),
+                numeral);
+    }
+#endif
 
     am = am_push(am, asset_create(i, bmp));
   }
@@ -152,10 +212,18 @@ struct assets_manager *create_assets(struct assets_manager *restrict am, TigrFon
 
   am = am_push(am, asset_create(ASSET_MINES_COUNTER, mines_asset));
 
+  // create 3 emtpy assets for the menu
+  for (unsigned i = 0; i < MS_DIFFICULTIES; i++) {
+    Tigr *bmp = tigrBitmap(max_text_width(font), max_text_height(font));
+    if (!bmp) continue;
+
+    am = am_push(am, asset_create(ASSET_EMPTY, bmp));
+  }
+
   return am;
 }
 
-static inline struct panel *create_navbar(struct assets_manager *restrict am, size_t width, size_t height) {
+static struct panel *create_navbar(struct assets_manager *restrict am, size_t width, size_t height) {
   if (!am) return NULL;
 
   struct component *humburger = component_create(0, 0, 0, ALIGN_LEFT, 1, am_get_at(am, ASSET_HUMBURGER));
@@ -165,7 +233,7 @@ static inline struct panel *create_navbar(struct assets_manager *restrict am, si
 }
 
 // assumes component creation never fails
-static inline struct panel *create_stats_panel(struct assets_manager *restrict am, size_t width, size_t height) {
+static struct panel *create_stats_panel(struct assets_manager *restrict am, size_t width, size_t height) {
   if (!am) return NULL;
 
   return panel_create(
@@ -182,10 +250,10 @@ static inline struct panel *create_stats_panel(struct assets_manager *restrict a
 }
 
 // assumes component creation never fails
-static inline struct panel *create_main_panel(struct assets_manager *restrict am,
-                                              struct game *restrict game,
-                                              size_t width,
-                                              size_t height) {
+static struct panel *create_main_panel(struct assets_manager *restrict am,
+                                       struct game *restrict game,
+                                       size_t width,
+                                       size_t height) {
   if (!am || !game) return NULL;
 
   struct panel *panel =
@@ -207,75 +275,87 @@ static inline struct panel *create_main_panel(struct assets_manager *restrict am
   return panel;
 }
 
-static inline unsigned max_text_width(TigrFont *restrict font) {
-  char *difficulty_as_text[] = {"classic", "advanced", "expert"};
-
-  enum local_str_size {
-    SIZE = 64,
-  };
-  char text[SIZE];
-
-  unsigned width = 0;
-  for (size_t i = 0; i < sizeof difficulty_as_text / sizeof *difficulty_as_text; i++) {
-    if (!sprintf_wrapper(text, sizeof text, "%s", difficulty_as_text[i])) continue;
-
-    unsigned tmp_width = tigrTextWidth(font, text);
-    if (width < tmp_width) width = tmp_width;
-  }
-
-  return width;
-}
-
-static inline unsigned max_text_height(TigrFont *restrict font) {
-  return tigrTextHeight(font, "a");
-}
-
-static inline struct panel *create_menu(struct assets_manager *restrict *am,
-                                        TigrFont *restrict font,
-                                        size_t width,
-                                        size_t height) {
+static struct panel *create_menu(struct assets_manager *restrict *am, TigrFont *restrict font, size_t width) {
   if (!am) return NULL;
 
   unsigned menu_width = max_text_width(font);
   unsigned menu_height = max_text_height(font);
 
-  if (menu_width > width || menu_height > height) return NULL;
+  if (menu_width > width) return NULL;
 
-  struct panel *panel = panel_create(PANEL_MENU, LEFT_MARGIN, HEIGHT_NAV_PANE, ALIGN_LEFT, menu_width, menu_height, 0);
+  struct panel *panel = panel_create(PANEL_MENU, LEFT_MARGIN, TILE_SIZE, ALIGN_LEFT, menu_width, menu_height * 3, 0);
   if (!panel) return NULL;
+  panel_clear(panel, tigrRGB(192, 192, 192));
 
   for (unsigned i = 0; i < MS_DIFFICULTIES; i++) {
-    Tigr *bmp = tigrBitmap(menu_width, menu_height);
-    if (!bmp) continue;
+    struct asset *empty = am_get_free(*am, ASSET_EMPTY);
+    if (!empty) { continue; }
 
-    *am = am_push(*am, asset_create(ASSET_EMPTY, bmp));
-
-    panel =
-      panel_add(panel, 1, component_create(i, 0, i * menu_height, ALIGN_CENTER, 1, am_get_free(*am, ASSET_EMPTY)));
+    print_difficulty(empty->bmp, font, difficulties[i]);
+    panel = panel_add(panel, 1, component_create(difficulties[i], 0, i * menu_height, ALIGN_CENTER, 1, empty));
   }
 
+  panel->visible = false;
+  panel->blend = false;
   return panel;
 }
 
-bool create_panels(struct panel **restrict panels,
-                   size_t size,
-                   struct assets_manager *restrict am,
-                   struct game *restrict game,
-                   TigrFont *restrict font,
-                   size_t width) {
+static void cleanup_panels(struct panel **restrict panels, size_t count) {
+  for (size_t i = 0; i < count; i++) {
+    panel_destroy(panels[i]);
+  }
+}
+
+static bool create_panels(struct panel **restrict panels,
+                          size_t size,
+                          struct assets_manager *restrict am,
+                          struct game *restrict game,
+                          TigrFont *restrict font,
+                          size_t width) {
   if (!panels) return false;
+
+  if (PANEL_MENU >= size) return false;
 
   panels[PANEL_NAVBAR] = create_navbar(am, width, HEIGHT_NAV_PANE);
   panels[PANEL_STATS] = create_stats_panel(am, width, HEIGHT_STAT_PANE);
   panels[PANEL_BOARD] =
     create_main_panel(am, game, width, calculate_height(&game->board) - (HEIGHT_NAV_PANE + HEIGHT_STAT_PANE));
-  // panels[PANEL_MENU] = create_menu(&am, font, width, height);
+  panels[PANEL_MENU] = create_menu(&am, font, width);
 
   for (size_t i = 0; i < size; i++) {
-    if (!panels[i]) return false;
+    if (!panels[i]) {
+      cleanup_panels(panels, i);
+      return false;
+    }
   }
 
   return true;
+}
+
+struct window *create_window(struct game *restrict game, struct assets_manager *restrict am, TigrFont *restrict font) {
+  if (!game || !am || !font) return NULL;
+
+  size_t window_width = calculate_width(&game->board);
+  size_t window_height = calculate_height(&game->board);
+  struct window *window = window_create(window_width, window_height, "Minesweeper", TIGR_AUTO | TIGR_2X, 0);
+  if (!window) { return NULL; }
+
+  // panels
+  struct panel *panels[PANEL_AMOUNT] = {0};
+  if (!create_panels(panels,
+                     sizeof panels / sizeof *panels,
+                     am,
+                     game,
+                     font,
+                     window_width - (LEFT_MARGIN + RIGHT_MARGIN))) {
+    window_destroy(window);
+    return NULL;
+  }
+
+  for (size_t i = 0; i < sizeof panels / sizeof *panels; i++) {
+    window = window_push(window, 1, panels[i]);
+  }
+  return window;
 }
 
 void reveal_mines(struct board *restrict board) {
@@ -291,13 +371,12 @@ void reveal_mines(struct board *restrict board) {
   }
 }
 
-void draw_clock(struct window *restrict window, struct game *restrict game, TigrFont *restrict font) {
-  if (!window || !game) return;
+static void draw_clock(struct panel *restrict panel, struct game *restrict game, TigrFont *restrict font) {
+  if (!panel || !game) return;
 
   if (!font) font = tfont;
 
-  struct panel *stats = window->panels[PANEL_STATS];
-  struct component *clock_component = stats->components[SC_CLOCK];
+  struct component *clock_component = panel->components[SC_CLOCK];
 
   enum str_local_size {
     SIZE = 64,
@@ -312,18 +391,17 @@ void draw_clock(struct window *restrict window, struct game *restrict game, Tigr
   tigrPrint(asset->bmp,
             font,
             asset->bmp->w / 2 - tigrTextWidth(font, time_as_str) / 2,
-            asset->bmp->h / 2 /*- tigrTextHeight(font, time_as_str)*/,
+            asset->bmp->h / 2 - tigrTextHeight(font, time_as_str) / 2,
             tigrRGB(RED),
             time_as_str);
 }
 
-void draw_mines_counter(struct window *restrict window, struct game *restrict game, TigrFont *restrict font) {
-  if (!window || !game) return;
+static void draw_mines_counter(struct panel *restrict panel, struct game *restrict game, TigrFont *restrict font) {
+  if (!panel || !game) return;
 
   if (!font) font = tfont;
 
-  struct panel *stats = window->panels[PANEL_STATS];
-  struct component *clock_component = stats->components[SC_MINES_COUNTER];
+  struct component *clock_component = panel->components[SC_MINES_COUNTER];
 
   enum str_local_size {
     SIZE = 64,
@@ -337,105 +415,352 @@ void draw_mines_counter(struct window *restrict window, struct game *restrict ga
   tigrPrint(asset->bmp,
             font,
             asset->bmp->w / 2 - tigrTextWidth(font, mines_count_as_str) / 2,
-            asset->bmp->h / 2 /*- tigrTextHeight(font, mines_count_as_str)*/,
+            asset->bmp->h / 2 - tigrTextHeight(font, mines_count_as_str) / 2,
             tigrRGB(RED),
             mines_count_as_str);
 }
 
-void on_mouse_click(struct window *restrict window,
-                    struct game *restrict game,
-                    struct assets_manager *restrict am,
-                    struct mouse_event mouse_event) {
-  if (!window || !game) return;
+static void reset_board(struct panel *restrict panel, struct assets_manager *restrict am) {
+  if (!panel || !am) { return; }
 
-  if (mouse_event.button == MOUSE_NONE) {
-    component_pop(window->panels[PANEL_STATS]->components[SC_BUTTON]);
-    component_push(window->panels[PANEL_STATS]->components[SC_BUTTON], am_get_at(am, ASSET_HAPPY));
-    return;
+  for (size_t i = 0; i < panel->components_amount; i++) {
+    struct component *current = panel_component_at(panel, i);
+
+    component_clear(current);
+    component_push(current, am_get_at(am, ASSET_TILE));
   }
+}
 
-  component_pop(window->panels[PANEL_STATS]->components[SC_BUTTON]);
-  component_push(window->panels[PANEL_STATS]->components[SC_BUTTON], am_get_at(am, ASSET_SHOCK));
+static void draw_board(struct panel *restrict panel, struct game *restrict game, struct assets_manager *restrict am) {
+  if (!panel || !game || !am) { return; }
 
-  if (game->prev_buttons != MOUSE_NONE) return;
+  for (size_t row = 0; row < board_rows(&game->board); row++) {
+    for (size_t col = 0; col < board_cols(&game->board); col++) {
+      struct cell *cell = board_cell(&game->board, row, col);
+      if (!cell) continue;
 
-  struct panel *clicked_panel = window_get_panel(window, mouse_event.x, mouse_event.y);
-  if (!clicked_panel) return;
-#include <string.h>
-  if (!clicked_panel) {
-    puts("null panel");
-    return;
+      struct component *component = panel_component_at(panel, row * board_cols(&game->board) + col);
+      if (cell->flagged) {
+        component_remove(component, ASSET_FLAG);
+        component_push(component, am_get(am, ASSET_FLAG));
+      } else if (cell->mine && cell->revealed) {
+        component_clear(component);
+        component_push(component, am_get(am, ASSET_MINE));
+      } else if (cell->revealed) {
+        component_clear(component);
+        component_push(component, am_get(am, ASSET_ZERO + cell->adjacent_mines));
+      } else {
+        component_clear(component);
+        component_push(component, am_get(am, ASSET_TILE));
+      }
+    }
   }
-  switch (clicked_panel->id) {
-    case PANEL_BOARD:
-      puts("board");
+}
+
+static void draw_button(struct panel *restrict panel, struct game *restrict game, struct assets_manager *restrict am) {
+  if (!panel || !game || !am) { return; }
+
+  struct component *button = panel_component_at(panel, SC_BUTTON);
+  if (!button) { return; }
+  component_pop(button);
+
+  switch (game->state) {
+    case STATE_WON:
+      component_push(button, am_get_at(am, ASSET_CHAD));
       break;
-    case PANEL_MENU:
-      puts("menu");
+    case STATE_LOST:
+      component_push(button, am_get_at(am, ASSET_SAD));
       break;
-    case PANEL_NAVBAR:
-      puts("navbar");
+    case STATE_PLAYING:
+    default:  // fallthrough
+      component_push(button, am_get_at(am, ASSET_HAPPY));
       break;
-    case PANEL_STATS:
-      puts("stats");
+  }
+}
+
+void draw_window(struct window *restrict window,
+                 struct game *restrict game,
+                 struct assets_manager *restrict am,
+                 TigrFont *restrict font) {
+  if (!window || !game) { return; }
+
+  if (!font) font = tfont;
+
+  window_clear(window, tigrRGBA(BOARD_COLOR));
+
+  struct panel *stats = window_panel_at(window, PANEL_STATS);
+  draw_clock(stats, game, font);
+  draw_mines_counter(stats, game, font);
+  draw_button(stats, game, am);
+  draw_board(window_panel_at(window, PANEL_BOARD), game, am);
+
+  window_draw(window, ALPHA);
+}
+
+static void toggle_menu(struct window *restrict window) {
+  if (!window) return;
+
+  struct panel *menu = window_panel_at(window, PANEL_MENU);
+  if (!menu) return;
+
+  menu->visible = !menu->visible;
+}
+
+static void toggle_menu_off(struct window *restrict window) {
+  if (!window) return;
+
+  struct panel *menu = window_panel_at(window, PANEL_MENU);
+  if (!menu) return;
+
+  if (menu->visible) menu->visible = false;
+}
+
+static size_t sum_adjacent_flags(struct cell const *restrict cells, size_t row, size_t col, size_t rows, size_t cols) {
+  size_t prev_row = row - 1;
+  size_t last_row = row + 1;
+  size_t prev_col = col - 1;
+  size_t last_col = col + 1;
+
+  if (row == 0) { prev_row = row; }
+  if (row == rows - 1) { last_row = row; }
+
+  if (col == 0) { prev_col = col; }
+  if (col == cols - 1) { last_col = col; }
+
+  size_t adjacent_flags = 0;
+  for (size_t curr_row = prev_row; curr_row <= last_row; curr_row++) {
+    for (size_t curr_col = prev_col; curr_col <= last_col; curr_col++) {
+      if (cells[curr_row * cols + curr_col].flagged) adjacent_flags++;
+    }
+  }
+  return adjacent_flags;
+}
+
+static void reveal_next_cell(struct game *restrict game, unsigned row, unsigned col) {
+  if (!game) return;
+
+  if (game->state == STATE_LOST) return;
+
+  // boundry check
+  size_t rows = board_rows(&game->board);
+  size_t cols = board_cols(&game->board);
+  if (row >= rows) return;
+  if (col >= cols) return;
+
+  struct cell *current_cell = board_cell(&game->board, row, col);
+  if (!current_cell) return;
+  if (current_cell->revealed || current_cell->flagged) return;
+
+  board_reveal_cell(&game->board, row, col);
+  if (current_cell->mine) game->state = STATE_LOST;
+
+  size_t adjacent_flags = sum_adjacent_flags(game->board.cells, row, col, rows, cols);
+  if (adjacent_flags < current_cell->adjacent_mines) return;
+
+  // try to go up
+  reveal_next_cell(game, row - 1, col);
+  // try to go top right
+  reveal_next_cell(game, row - 1, col + 1);
+  // try to go right
+  reveal_next_cell(game, row, col + 1);
+  // try to go bottom right
+  reveal_next_cell(game, row + 1, col + 1);
+  // try to go down
+  reveal_next_cell(game, row + 1, col);
+  // try to go bottom left
+  reveal_next_cell(game, row + 1, col - 1);
+  // try to go left
+  reveal_next_cell(game, row, col - 1);
+  // try to go top left
+  reveal_next_cell(game, row - 1, col - 1);
+}
+
+static int flag(struct cell *restrict cell, int mines) {
+  if (!cell) return mines;
+
+  if (cell->revealed) return mines;
+
+  cell->flagged = !cell->flagged;
+  if (cell->flagged) { return mines - 1; }
+
+  return mines + 1;
+}
+
+static void react(struct window *window, struct game *restrict game, struct mouse_event mouse_event) {
+  if (!window || !game) { return; }
+
+  if (game->state != STATE_PLAYING) { return; }
+
+  struct component *clicked = window_get_component(window, mouse_event.x, mouse_event.y);
+  if (!clicked) { return; }
+
+  /*
+    id = row * board::cols + col
+
+    col = id % board::cols
+    row = id / board::cols
+  */
+  unsigned col = clicked->id % board_cols(&game->board);
+  unsigned row = clicked->id / board_cols(&game->board);
+
+  struct cell *cell = board_cell(&game->board, row, col);
+  if (!cell) { return; }
+
+  switch (mouse_event.button) {
+    case MOUSE_LEFT:
+      if (cell->mine) {
+        game->state = STATE_LOST;
+      } else if (!cell->adjacent_mines) {
+        reveal_next_cell(game, row, col);
+      } else {
+        board_reveal_cell(&game->board, row, col);
+      }
+      break;
+    case MOUSE_RIGHT:
+      game->mines = flag(cell, game->mines);
+      break;
+    case MOUSE_MIDDLE:
+      if (!cell->revealed) { break; }
+      // hack
+      cell->revealed = false;
+      game->board.revealed_cells--;
+      // end of hack
+
+      reveal_next_cell(game, row, col);
       break;
     default:
       break;
   }
 
-  struct component *clicked_componenet = window_get_component(window, mouse_event.x, mouse_event.y);
-  if (!clicked_componenet) {
-    puts("null component");
-    return;
+  // check win condition
+  if (board_revealed_cells(&game->board) && game->state == STATE_PLAYING) {
+    game->state = STATE_WON;
+    game->mines = 0;
   }
-  if (clicked_panel->id == PANEL_STATS) {
-    switch (clicked_componenet->id) {
-      case SC_CLOCK:
-        puts("clock");
+}
+
+static void toggle_emoji(struct component *restrict component, struct asset *restrict asset) {
+  if (!component || !asset) return;
+
+  component_pop(component);
+  component_push(component, asset);
+}
+
+struct window *on_mouse_click(struct window *restrict window,
+                              struct game *restrict game,
+                              struct assets_manager *restrict am,
+                              TigrFont *restrict font,
+                              struct mouse_event mouse_event) {
+  if (!window) { goto end; }
+
+  if (!game || !am) { goto end; }
+
+  if (!font) font = tfont;
+
+  // change the smiley when mouse button up
+  if (mouse_event.button == MOUSE_NONE) {
+    struct panel *stats = window_panel_at(window, PANEL_STATS);
+    if (!STATE_LOST) { goto end; }
+
+    toggle_emoji(panel_component_at(stats, SC_BUTTON), am_get_at(am, ASSET_HAPPY));
+    goto end;
+  }
+
+  // change the smiley when mouse button down
+  struct panel *stats = window_panel_at(window, PANEL_STATS);
+  if (!STATE_LOST) { goto end; }
+
+  toggle_emoji(panel_component_at(stats, SC_BUTTON), am_get_at(am, ASSET_SHOCK));
+
+  // prevent mouse button hold down
+  if (game->prev_buttons != MOUSE_NONE) { goto end; }
+
+  // get the components one clicked on
+  struct panel *clicked_panel = window_get_panel(window, mouse_event.x, mouse_event.y);
+  if (!clicked_panel) { goto end; }
+
+  struct component *clicked_component = window_get_component(window, mouse_event.x, mouse_event.y);
+  if (!clicked_component) { goto end; }
+
+  if (clicked_panel) {
+    switch (clicked_panel->id) {
+      case PANEL_NAVBAR:
+        if (!clicked_component) { break; }
+
+        toggle_menu(window);
         break;
-      case SC_MINES_COUNTER:
-        puts("mines counter");
+      case PANEL_BOARD:
+        react(window, game, mouse_event);
+        toggle_menu_off(window);
         break;
-      case SC_BUTTON:
-        puts("button");
+      case PANEL_STATS:
+        toggle_menu_off(window);
+
+        // reset button was clicked
+        if (clicked_component->id == SC_BUTTON) {
+          toggle_emoji(clicked_component, am_get_at(am, ASSET_HAPPY));
+
+          reset_board(window_panel_at(window, PANEL_BOARD), am);
+          *game = game_restart(game, game->board.difficulty);
+        }
         break;
-      default:
+      case PANEL_MENU:
+        // destroy the assets the menu consist of
+        for (size_t i = 0; i < clicked_panel->components_amount; i++) {
+          struct component *current = panel_component_at(clicked_panel, i);
+          if (!current) continue;
+
+          for (size_t j = 0; j < current->size; j++) {
+            am_return(am, &current->assets[j]);
+
+#ifdef MS_DEBUG
+#include <stdio.h>
+            printf("asset: {id: %s, ref_count: %d}\n",
+                   current->assets[j].id == ASSET_EMPTY ? "empty" : "?",
+                   current->assets[j].ref_count);
+#endif
+          }
+        }
+
+        *game = game_restart(game, clicked_component->id);
+        window_destroy(window);
+        window = create_window(game, am, font);
+
         break;
     }
   }
-
-  // reset button was clicked
-  if (clicked_panel->id == PANEL_STATS && clicked_componenet->id == SC_BUTTON) {
-    printf("reset\n");
-    enum difficulty difficulty = game->board.difficulty;
-    game_destroy(game);
-    *game = game_create(difficulty);
-
-    component_pop(window->panels[PANEL_STATS]->components[SC_BUTTON]);
-    component_push(window->panels[PANEL_STATS]->components[SC_BUTTON], am_get_at(am, ASSET_HAPPY));
-    return;
-  }
-
-  switch (game->state) {
-    case STATE_PLAYING:
-      break;
-    case STATE_WON:
-      // component_pop(window->panels[PANEL_STATS]->components[SC_BUTTON]);
-      // component_push(window->panels[PANEL_STATS]->components[SC_BUTTON], am_get_at(am, ASSET_CHAD));
-    case STATE_LOST:  // fallthrough
-      // component_pop(window->panels[PANEL_STATS]->components[SC_BUTTON]);
-      // component_push(window->panels[PANEL_STATS]->components[SC_BUTTON], am_get_at(am, ASSET_SAD));
-      break;
-    case STATE_INVALID:
-    default:  // fallthrough
-      break;
-  }
+end:
+  return window;
 }
 
 void on_mouse_hover(struct window *restrict window,
                     struct game *restrict game,
                     struct assets_manager *restrict am,
+                    TigrFont *restrict font,
                     struct mouse_event mouse_event) {
+  if (!window || !game || !am) { return; }
+
+  struct panel *menu = window_panel_at(window, PANEL_MENU);
+  if (!menu || !menu->visible) { return; }
+
+  struct panel *hovered_panel = window_get_panel(window, mouse_event.x, mouse_event.y);
+  if (!hovered_panel || hovered_panel->id != PANEL_MENU) { return; }
+
+  struct component *hovered_component = window_get_component(window, mouse_event.x, mouse_event.y);
+  if (!hovered_component) { return; }
+
+  for (size_t i = 0; i < hovered_panel->components_amount; i++) {
+    if (hovered_panel->components[i] == hovered_component) continue;
+
+    print_difficulty(hovered_panel->components[i]->assets->bmp, font, hovered_panel->components[i]->id);
+  }
+
+  tigrRect(hovered_component->assets->bmp,
+           0,
+           0,
+           hovered_component->assets->bmp->w,
+           hovered_component->assets->bmp->h,
+           tigrRGB(BLACK));
 }
 
 void alert(TigrFont *restrict font, char const *fmt, ...) {
