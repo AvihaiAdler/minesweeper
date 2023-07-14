@@ -1,5 +1,5 @@
 ### Graphics
-Graphics is a thin wrapper around `Tigr`. The library consists of 6 components all interracting with each other ![here's a small example](readme_assests/graphics.png)
+Graphics is a thin wrapper around `Tigr`. The library consists of 6 components all interracting with each other ![here's a small example](readme_assets/graphics.png)
 
 #### Asset
 Asset represent the bare minimun of a graphical element. It holds an `id` and a `Tigr *` (the bitmap for all intent and purposes). Assets are managed by the `Asset Manager` who's responsible to hand them over as requested.
