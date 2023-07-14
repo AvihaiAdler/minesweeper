@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
 #include "alignment.h"
 #include "component.h"
@@ -11,6 +12,8 @@
  */
 struct panel {
   unsigned id;
+  bool visible;  // true by default. control whether a window should draw the panel
+  bool blend;    // true by default. controls whether a panel should blend or override other panels
 
   unsigned x_offset;
   unsigned y_offset;
@@ -58,3 +61,5 @@ void panel_clear(struct panel *restrict panel, TPixel color);
  * @brief returns the component occuping the coodinates (x, y). if no such component exists - returns NULL
  */
 struct component *panel_get_component(struct panel *restrict panel, unsigned x, unsigned y);
+
+struct component *panel_component_at(struct panel *restrict panel, size_t idx);

@@ -1,6 +1,5 @@
 #include "panel.h"
 #include <stdarg.h>
-#include <stdbool.h>
 #include <stdlib.h>
 
 struct panel *panel_create(unsigned id,
@@ -21,6 +20,8 @@ struct panel *panel_create(unsigned id,
   }
 
   *panel = (struct panel){.id = id,
+                          .visible = true,
+                          .blend = true,
                           .x_offset = x,
                           .y_offset = y,
                           .alignment = alignment,
@@ -71,7 +72,7 @@ void panel_destroy(struct panel *restrict panel) {
 }
 
 // panel, component and their internal bmps must not be NULL
-static inline unsigned x_component(struct panel const *restrict panel, struct component const *restrict component) {
+static unsigned x_component(struct panel const *restrict panel, struct component const *restrict component) {
   switch (component->alignment) {
     case ALIGN_LEFT:
       return component->x_offset;
@@ -85,8 +86,11 @@ static inline unsigned x_component(struct panel const *restrict panel, struct co
 
 // panel, component and their internal bmps must not be NULL
 // componenet is _always_ top aligned w.r.t the y axis of a panel
-static inline unsigned y_component(struct panel const *restrict panel, struct component const *restrict component) {
-  // return panel->bmp->h / 2 - (component_height(component) / 2 + component->y_offset);
+static unsigned y_component(struct panel const *restrict panel, struct component const *restrict component) {
+  (void)panel;
+  // if (component->alignment == ALIGN_CENTER) {
+  //   return panel->bmp->h / 2 - (component_height(component) / 2 + component->y_offset);
+  // }
   return component->y_offset;
 }
 
@@ -123,10 +127,10 @@ void panel_clear(struct panel *restrict panel, TPixel color) {
   tigrClear(panel->bmp, color);
 }
 
-static inline bool within_component_boundries(struct panel const *restrict panel,
-                                              struct component const *restrict component,
-                                              unsigned x,
-                                              unsigned y) {
+static bool within_component_boundries(struct panel const *restrict panel,
+                                       struct component const *restrict component,
+                                       unsigned x,
+                                       unsigned y) {
   if (!panel || !panel->bmp) return false;
 
   if (!component || !component->size) return false;
@@ -147,4 +151,12 @@ struct component *panel_get_component(struct panel *restrict panel, unsigned x, 
     if (within_component_boundries(panel, current, x, y)) { return current; }
   }
   return NULL;
+}
+
+struct component *panel_component_at(struct panel *restrict panel, size_t idx) {
+  if (!panel) return NULL;
+
+  if (idx >= panel->components_amount) return NULL;
+
+  return panel->components[idx];
 }
