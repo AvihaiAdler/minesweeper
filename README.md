@@ -8,7 +8,20 @@ As expected the game is played with the mouse. Left click to reveal a tile, righ
 
 #### Building an compiling
 
-The game uses CMake as its build tool. As such one need it to be installed. Currently the script will work on _linux only_ due to the library `tigr` depends on.
+The game uses CMake as its build tool. As such one need it to be installed.
+
+#### Prerequisites:
+##### Linux users
+- Make sure you have `freeglut3-dev` installed
+
+##### Windows users
+- Make sure you have OpenGL installed 
+
+##### Mac users
+- Sorry - you're on your own here
+
+##### WSL
+`Tigr` struggle when in comes to WSL. The game will compile and will work just fine in Debug mode - however it won't in Release mode. Moreover the program will seg-fault on termination
 
 - clone the project
 - navigate to the project directory
@@ -16,11 +29,12 @@ The game uses CMake as its build tool. As such one need it to be installed. Curr
 - `cmake --build build` to build the project
 - the binary (`minesweeper`) will be located under `build/`
 
+
 #### RoadMap
 
 - [ ] add the ability to mark a tile with a question mark
-- [ ] add the ability to change difficulty
-- [ ] support for windows
+- [x] add the ability to change difficulty
+- [x] support for windows
 
 #### Notes
 
