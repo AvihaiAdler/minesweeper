@@ -1,4 +1,7 @@
 .vscode/*
+.vs/*
+out/*
+CMakeSettings.json
 minesweeper/*
 build/*
 notes
