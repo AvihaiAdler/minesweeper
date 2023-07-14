@@ -3,12 +3,22 @@
 /**
  * @brief represents mouse buttons
  */
+
+#ifdef _WIN32
+enum mouse_button {
+  MOUSE_NONE,
+  MOUSE_LEFT = 1,
+  MOUSE_MIDDLE = 2,
+  MOUSE_RIGHT = 4,
+};
+#else
 enum mouse_button {
   MOUSE_NONE,
   MOUSE_LEFT = 1,
   MOUSE_RIGHT = 2,
   MOUSE_MIDDLE = 4,
 };
+#endif
 
 /**
  * @brief represents the complete event. the pressed button & its coordinates
