@@ -5,7 +5,7 @@
 #define INIT_CAPACITY 16
 #define GROWTH_FACTOR 1
 
-static inline void asset_destroy(struct asset *restrict asset) {
+static void asset_destroy(struct asset *restrict asset) {
   if (!asset) return;
 
   tigrFree(asset->bmp);
@@ -51,11 +51,11 @@ void am_destroy(struct assets_manager *restrict assets_manager) {
   free(assets_manager);
 }
 
-static inline bool resize(struct assets_manager *restrict *assets_manager) {
+static bool resize(struct assets_manager *restrict *assets_manager) {
   struct assets_manager *tmp = *assets_manager;
 
   size_t capacity = tmp->capacity << GROWTH_FACTOR;
-  if (capacity < tmp->capacity) return false;
+  if (capacity < tmp->capacity) return false;  // overflow
 
   struct assets_manager *resized = realloc(tmp, sizeof *resized + sizeof *tmp->assets * capacity);
   if (!resized) return false;
@@ -146,13 +146,15 @@ void am_return(struct assets_manager *restrict assets_manager, struct asset *res
   if (!assets_manager || !asset) return;
 
   // make sure the returned asset is actually tracked
-  struct asset *tmp = am_get(assets_manager, asset->id);
-  if (!tmp) {
-    asset_destroy(asset);
-    return;
-  }
+  struct asset *curr = NULL;
+  for (size_t i = 0; i < assets_manager->size; i++) {
+    curr = &assets_manager->assets[i];
 
-  if (tmp->ref_count) tmp->ref_count--;
+    if (curr->id == asset->id && curr->bmp == asset->bmp) {
+      if (curr->ref_count) curr->ref_count--;
+      break;
+    }
+  }
 }
 
 struct asset asset_create(int id, Tigr *restrict bmp) {
