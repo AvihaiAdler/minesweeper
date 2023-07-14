@@ -24,8 +24,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     -Wall
     -Wextra
     -pedantic
-    -g
-    -Og
   )
 
   target_link_libraries(tigr PUBLIC
