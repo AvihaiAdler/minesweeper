@@ -462,18 +462,18 @@ static void draw_button(struct panel *restrict panel, struct game *restrict game
 
   struct component *button = panel_component_at(panel, SC_BUTTON);
   if (!button) { return; }
-  component_pop(button);
 
   switch (game->state) {
     case STATE_WON:
+      component_pop(button);
       component_push(button, am_get_at(am, ASSET_CHAD));
       break;
     case STATE_LOST:
+      component_pop(button);
       component_push(button, am_get_at(am, ASSET_SAD));
       break;
     case STATE_PLAYING:
     default:  // fallthrough
-      component_push(button, am_get_at(am, ASSET_HAPPY));
       break;
   }
 }
@@ -668,8 +668,7 @@ struct window *on_mouse_click(struct window *restrict window,
 
   // change the smiley when mouse button down
   struct panel *stats = window_panel_at(window, PANEL_STATS);
-  if (!STATE_LOST) { goto end; }
-
+  if (!stats) { goto end; }
   toggle_emoji(panel_component_at(stats, SC_BUTTON), am_get_at(am, ASSET_SHOCK));
 
   // prevent mouse button hold down
