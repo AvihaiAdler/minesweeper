@@ -57,4 +57,17 @@ struct panel *window_panel_at(struct window *restrict window, unsigned idx);
  */
 struct panel *window_get_panel(struct window *restrict window, unsigned x, unsigned y);
 
+/**
+ * @brief get a component based on its x, y values
+ */
 struct component *window_get_component(struct window *restrict window, unsigned x, unsigned y);
+
+/**
+ * @brief get the left most x value of a panel
+ */
+unsigned window_x_panel(struct window const *restrict window, struct panel const *restrict panel);
+
+/**
+ * @brief get the top most y value of a panel
+ */
+unsigned window_y_panel(struct panel const *restrict panel);

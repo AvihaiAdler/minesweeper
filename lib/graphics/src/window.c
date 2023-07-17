@@ -75,7 +75,7 @@ void window_destroy(struct window *restrict window) {
 }
 
 // window, panel and both window::window and panel::bmp must not be NULL
-static unsigned x_panel(struct window const *restrict window, struct panel const *restrict panel) {
+unsigned window_x_panel(struct window const *restrict window, struct panel const *restrict panel) {
   switch (panel->alignment) {
     case ALIGN_LEFT:
       return panel->x_offset;
@@ -89,7 +89,7 @@ static unsigned x_panel(struct window const *restrict window, struct panel const
 
 // panel and panel::bmp must not be NULL
 // the panel is always top aligned w.r.t to its window y axis
-static unsigned y_panel(struct panel const *restrict panel) {
+unsigned window_y_panel(struct panel const *restrict panel) {
   return panel->y_offset;
 }
 
@@ -105,8 +105,8 @@ void window_draw(struct window *restrict window, float alpha) {
     if (current->blend) {
       tigrBlitAlpha(window->window,
                     current->bmp,
-                    x_panel(window, current),
-                    y_panel(current),
+                    window_x_panel(window, current),
+                    window_y_panel(current),
                     0,
                     0,
                     current->bmp->w,
@@ -115,15 +115,15 @@ void window_draw(struct window *restrict window, float alpha) {
     } else {
       tigrBlit(window->window,
                current->bmp,
-               x_panel(window, current),
-               y_panel(current),
+               window_x_panel(window, current),
+               window_y_panel(current),
                0,
                0,
                current->bmp->w,
                current->bmp->h);
     }
 
-#ifdef GRAPHICS_DEBUG
+#ifdef DEBUG
     TPixel color = tigrRGB(255, 0, 0);
     switch (i) {
       case 1:
@@ -136,7 +136,12 @@ void window_draw(struct window *restrict window, float alpha) {
         color = tigrRGB(0, 0, 255);
         break;
     }
-    tigrRect(window->window, x_panel(window, current), y_panel(current), current->bmp->w, current->bmp->h, color);
+    tigrRect(window->window,
+             window_x_panel(window, current),
+             window_y_panel(current),
+             current->bmp->w,
+             current->bmp->h,
+             color);
 #endif
   }
 
@@ -165,8 +170,8 @@ static bool within_panel_bounderies(struct window const *restrict window,
 
   if (!panel || !panel->bmp) return false;
 
-  return x >= x_panel(window, panel) && x <= x_panel(window, panel) + panel->bmp->w && y >= y_panel(panel) &&
-         y <= y_panel(panel) + panel->bmp->h;
+  return x >= window_x_panel(window, panel) && x <= window_x_panel(window, panel) + panel->bmp->w &&
+         y >= window_y_panel(panel) && y <= window_y_panel(panel) + panel->bmp->h;
 }
 
 struct panel *window_get_panel(struct window *restrict window, unsigned x, unsigned y) {
@@ -188,5 +193,5 @@ struct component *window_get_component(struct window *restrict window, unsigned 
   struct panel *panel = window_get_panel(window, x, y);
   if (!panel) return NULL;
 
-  return panel_get_component(panel, x - x_panel(window, panel), y - y_panel(panel));
+  return panel_get_component(panel, x - window_x_panel(window, panel), y - window_y_panel(panel));
 }
