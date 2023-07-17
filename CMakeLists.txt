@@ -11,7 +11,7 @@ target_sources(minesweeper PRIVATE
 
 option(DEBUG "turn on for debug layout" OFF)
 if(DEBUG)
-  target_compile_definitions(minesweeper PRIVATE MS_DEBUG)
+  target_compile_definitions(minesweeper PRIVATE DEBUG)
 endif()
 
 target_compile_features(minesweeper PRIVATE c_std_99)
@@ -23,6 +23,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     -Wpedantic 
   )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  target_compile_definitions(minesweeper PRIVATE _CRT_SECURE_NO_WARNINGS)
   target_compile_options(minesweeper PRIVATE 
     -W4
   )
