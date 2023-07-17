@@ -89,12 +89,28 @@ static unsigned max_text_height(TigrFont *restrict font) {
   return tigrTextHeight(font, "a");
 }
 
-unsigned calculate_width(struct board const *restrict board) {
-  return board_cols(board) * TILE_SIZE + LEFT_MARGIN + RIGHT_MARGIN;
+static unsigned window_width(void) {
+  return (MS_EXPERT >> (OCTET * 2)) * TILE_SIZE + LEFT_MARGIN + RIGHT_MARGIN;
 }
 
-unsigned calculate_height(struct board const *restrict board) {
-  return board_rows(board) * TILE_SIZE + HEIGHT_NAV_PANE + HEIGHT_STAT_PANE;
+static unsigned window_height(void) {
+  return ((MS_EXPERT >> OCTET) & 0xff) * TILE_SIZE + HEIGHT_NAV_PANE + HEIGHT_STAT_PANE;
+}
+
+static unsigned panel_width(struct board *restrict board) {
+#ifdef DEBUG
+#include <stdio.h>
+  printf("panel width: %zu\n", board_cols(board));
+#endif
+  return board_cols(board) * TILE_SIZE;
+}
+
+static unsigned panel_height(struct board *restrict board) {
+#ifdef DEBUG
+#include <stdio.h>
+  printf("panel height: %zu\n", board_rows(board));
+#endif
+  return board_rows(board) * TILE_SIZE;
 }
 
 TigrFont *load_font(char const *restrict font_path) {
@@ -185,13 +201,13 @@ struct assets_manager *create_assets(struct assets_manager *restrict am, TigrFon
                 numeral);
     }
 
-#ifdef MS_DEBUG
+#ifdef DEBUG
     if (i - ASSET_ZERO == 0) {
       if (!sprintf_wrapper(numeral, sizeof numeral, "%d", i - ASSET_ZERO)) continue;
       tigrPrint(bmp,
-                font,
-                bmp->w / 2 - tigrTextWidth(font, numeral) / 2,
-                bmp->h / 2 - tigrTextHeight(font, numeral) / 2,
+                tfont,
+                bmp->w / 2 - tigrTextWidth(tfont, numeral) / 2,
+                bmp->h / 2 - tigrTextHeight(tfont, numeral) / 2,
                 numeric_color(i - ASSET_ZERO),
                 numeral);
     }
@@ -275,7 +291,10 @@ static struct panel *create_main_panel(struct assets_manager *restrict am,
   return panel;
 }
 
-static struct panel *create_menu(struct assets_manager *restrict *am, TigrFont *restrict font, size_t width) {
+static struct panel *create_menu(struct assets_manager *restrict *am,
+                                 TigrFont *restrict font,
+                                 size_t width,
+                                 unsigned x_offset) {
   if (!am) return NULL;
 
   unsigned menu_width = max_text_width(font);
@@ -283,7 +302,7 @@ static struct panel *create_menu(struct assets_manager *restrict *am, TigrFont *
 
   if (menu_width > width) return NULL;
 
-  struct panel *panel = panel_create(PANEL_MENU, LEFT_MARGIN, TILE_SIZE, ALIGN_LEFT, menu_width, menu_height * 3, 0);
+  struct panel *panel = panel_create(PANEL_MENU, x_offset, TILE_SIZE, ALIGN_LEFT, menu_width, menu_height * 3, 0);
   if (!panel) return NULL;
   panel_clear(panel, tigrRGB(192, 192, 192));
 
@@ -300,31 +319,28 @@ static struct panel *create_menu(struct assets_manager *restrict *am, TigrFont *
   return panel;
 }
 
-static void cleanup_panels(struct panel **restrict panels, size_t count) {
-  for (size_t i = 0; i < count; i++) {
-    panel_destroy(panels[i]);
-  }
-}
-
-static bool create_panels(struct panel **restrict panels,
+static bool create_panels(struct window *restrict window,
+                          struct panel **restrict panels,
                           size_t size,
                           struct assets_manager *restrict am,
                           struct game *restrict game,
-                          TigrFont *restrict font,
-                          size_t width) {
-  if (!panels) return false;
+                          TigrFont *restrict font) {
+  if (!panels || !am || !game) return false;
 
   if (PANEL_MENU >= size) return false;
 
-  panels[PANEL_NAVBAR] = create_navbar(am, width, HEIGHT_NAV_PANE);
-  panels[PANEL_STATS] = create_stats_panel(am, width, HEIGHT_STAT_PANE);
-  panels[PANEL_BOARD] =
-    create_main_panel(am, game, width, calculate_height(&game->board) - (HEIGHT_NAV_PANE + HEIGHT_STAT_PANE));
-  panels[PANEL_MENU] = create_menu(&am, font, width);
+  if (!font) font = tfont;
+
+  panels[PANEL_NAVBAR] = create_navbar(am, panel_width(&game->board), HEIGHT_NAV_PANE);
+  panels[PANEL_STATS] = create_stats_panel(am, panel_width(&game->board), HEIGHT_STAT_PANE);
+  panels[PANEL_BOARD] = create_main_panel(am, game, panel_width(&game->board), panel_height(&game->board));
+  panels[PANEL_MENU] = create_menu(&am, font, panel_width(&game->board), window_x_panel(window, panels[PANEL_NAVBAR]));
 
   for (size_t i = 0; i < size; i++) {
     if (!panels[i]) {
-      cleanup_panels(panels, i);
+      for (size_t j = 0; j < i; j++) {
+        panel_destroy(panels[i]);
+      }
       return false;
     }
   }
@@ -335,19 +351,12 @@ static bool create_panels(struct panel **restrict panels,
 struct window *create_window(struct game *restrict game, struct assets_manager *restrict am, TigrFont *restrict font) {
   if (!game || !am || !font) return NULL;
 
-  size_t window_width = calculate_width(&game->board);
-  size_t window_height = calculate_height(&game->board);
-  struct window *window = window_create(window_width, window_height, "Minesweeper", TIGR_AUTO | TIGR_2X, 0);
+  struct window *window = window_create(window_width(), window_height(), "Minesweeper", TIGR_FIXED, 0);
   if (!window) { return NULL; }
 
   // panels
   struct panel *panels[PANEL_AMOUNT] = {0};
-  if (!create_panels(panels,
-                     sizeof panels / sizeof *panels,
-                     am,
-                     game,
-                     font,
-                     window_width - (LEFT_MARGIN + RIGHT_MARGIN))) {
+  if (!create_panels(window, panels, sizeof panels / sizeof *panels, am, game, font)) {
     window_destroy(window);
     return NULL;
   }
@@ -712,7 +721,7 @@ struct window *on_mouse_click(struct window *restrict window,
           for (size_t j = 0; j < current->size; j++) {
             am_return(am, &current->assets[j]);
 
-#ifdef MS_DEBUG
+#ifdef DEBUG
 #include <stdio.h>
             printf("asset: {id: %s, ref_count: %d}\n",
                    current->assets[j].id == ASSET_EMPTY ? "empty" : "?",

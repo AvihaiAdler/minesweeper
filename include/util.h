@@ -10,10 +10,6 @@
 #include "tigr.h"
 #include "window.h"
 
-unsigned calculate_width(struct board const *restrict board);
-
-unsigned calculate_height(struct board const *restrict board);
-
 TigrFont *load_font(char const *restrict font_path);
 
 struct assets_manager *create_assets(struct assets_manager *restrict am, TigrFont *restrict font);
