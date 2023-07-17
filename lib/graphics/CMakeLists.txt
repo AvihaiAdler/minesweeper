@@ -19,9 +19,9 @@ target_link_libraries(graphics PUBLIC
   tigr
 )
 
-option(GRAPHICS_DEBUG "debug" OFF)
-if(GRAPHICS_DEBUG)
-  target_compile_definitions(graphics PRIVATE GRAPHICS_DEBUG)
+option(DEBUG "debug" OFF)
+if(DEBUG)
+  target_compile_definitions(graphics PRIVATE DEBUG)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
