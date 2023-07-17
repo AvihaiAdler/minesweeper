@@ -291,10 +291,7 @@ static struct panel *create_main_panel(struct assets_manager *restrict am,
   return panel;
 }
 
-static struct panel *create_menu(struct assets_manager *restrict *am,
-                                 TigrFont *restrict font,
-                                 size_t width,
-                                 unsigned x_offset) {
+static struct panel *create_menu(struct assets_manager *restrict *am, TigrFont *restrict font, size_t width) {
   if (!am) return NULL;
 
   unsigned menu_width = max_text_width(font);
@@ -302,7 +299,7 @@ static struct panel *create_menu(struct assets_manager *restrict *am,
 
   if (menu_width > width) return NULL;
 
-  struct panel *panel = panel_create(PANEL_MENU, x_offset, TILE_SIZE, ALIGN_LEFT, menu_width, menu_height * 3, 0);
+  struct panel *panel = panel_create(PANEL_MENU, 0, TILE_SIZE, ALIGN_LEFT, menu_width, menu_height * 3, 0);
   if (!panel) return NULL;
   panel_clear(panel, tigrRGB(192, 192, 192));
 
@@ -319,8 +316,7 @@ static struct panel *create_menu(struct assets_manager *restrict *am,
   return panel;
 }
 
-static bool create_panels(struct window *restrict window,
-                          struct panel **restrict panels,
+static bool create_panels(struct panel **restrict panels,
                           size_t size,
                           struct assets_manager *restrict am,
                           struct game *restrict game,
@@ -334,7 +330,7 @@ static bool create_panels(struct window *restrict window,
   panels[PANEL_NAVBAR] = create_navbar(am, panel_width(&game->board), HEIGHT_NAV_PANE);
   panels[PANEL_STATS] = create_stats_panel(am, panel_width(&game->board), HEIGHT_STAT_PANE);
   panels[PANEL_BOARD] = create_main_panel(am, game, panel_width(&game->board), panel_height(&game->board));
-  panels[PANEL_MENU] = create_menu(&am, font, panel_width(&game->board), window_x_panel(window, panels[PANEL_NAVBAR]));
+  panels[PANEL_MENU] = create_menu(&am, font, panel_width(&game->board));
 
   for (size_t i = 0; i < size; i++) {
     if (!panels[i]) {
@@ -356,7 +352,7 @@ struct window *create_window(struct game *restrict game, struct assets_manager *
 
   // panels
   struct panel *panels[PANEL_AMOUNT] = {0};
-  if (!create_panels(window, panels, sizeof panels / sizeof *panels, am, game, font)) {
+  if (!create_panels(panels, sizeof panels / sizeof *panels, am, game, font)) {
     window_destroy(window);
     return NULL;
   }
@@ -364,6 +360,9 @@ struct window *create_window(struct game *restrict game, struct assets_manager *
   for (size_t i = 0; i < sizeof panels / sizeof *panels; i++) {
     window = window_push(window, 1, panels[i]);
   }
+
+  // sort of a hack
+  window->panels[PANEL_MENU]->x_offset = window_x_panel(window, panels[PANEL_NAVBAR]);
   return window;
 }
 
