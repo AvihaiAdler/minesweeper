@@ -3,6 +3,7 @@
 enum asset_ids {
   ASSET_TILE = 0,
   ASSET_FLAG,
+  ASSET_QUESTION,
   ASSET_MINE,
   ASSET_HUMBURGER,
   ASSET_HAPPY,

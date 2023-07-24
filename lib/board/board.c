@@ -136,6 +136,7 @@ void board_reveal_cell(struct board *restrict board, size_t row, size_t col) {
   if (row >= board_rows(board) || col >= board_cols(board)) return;
 
   board->cells[row * board_cols(board) + col].revealed = true;
+  board->cells[row * board_cols(board) + col].mark = MARK_NONE;
   board->revealed_cells++;
 }
 

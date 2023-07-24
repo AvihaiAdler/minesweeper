@@ -6,9 +6,16 @@
 
 #define OCTET 8
 
+enum mark {
+  MARK_NONE,
+  MARK_MINE,
+  MARK_QUESTION,
+  MARK_AMOUNT,
+};
+
 struct cell {
   bool mine;
-  bool flagged;
+  enum mark mark;
   bool revealed;
   size_t adjacent_mines;
 };
