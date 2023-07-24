@@ -19,6 +19,7 @@ int main(void) {
   struct assets_manager *am = am_create(ASSET_LOAD_AMOUNT,
                                         "resources/assets/tile",
                                         "resources/assets/flag",
+                                        "resources/assets/question",
                                         "resources/assets/mine",
                                         "resources/assets/humburger",
                                         "resources/assets/em_happy",
@@ -62,7 +63,7 @@ int main(void) {
     switch (game.state) {
       case STATE_INVALID:
         alert(font, "an unexpected error occurred");
-        break;
+        goto cleanup;
       case STATE_PLAYING:
         game.clock.end = time(NULL);  // update the clock
         break;
@@ -74,12 +75,13 @@ int main(void) {
     }
 
     on_mouse_hover(window, &game, am, font, mouse_event);
-    window = on_mouse_click(window, &game, am, font, mouse_event);
+    on_mouse_click(window, &game, am, font, mouse_event);
     game.prev_buttons = mouse_event.button;
 
     draw_window(window, &game, am, font);
   }
 
+cleanup:
   window_destroy(window);
 game_cleanup:
   game_destroy(&game);

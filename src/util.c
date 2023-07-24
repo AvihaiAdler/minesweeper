@@ -276,15 +276,14 @@ static struct panel *create_main_panel(struct assets_manager *restrict am,
     panel_create(PANEL_BOARD, 0, HEIGHT_NAV_PANE + HEIGHT_STAT_PANE, ALIGN_CENTER, width, height, 0);
   if (!panel) return NULL;
 
-  unsigned offset = 0;  // (panel->bmp->w - board_cols(&game->board) * TILE_SIZE) / 2;
   for (size_t row = 0; row < board_rows(&game->board); row++) {
     for (size_t col = 0; col < board_cols(&game->board); col++) {
       unsigned pos = row * board_cols(&game->board) + col;
 
-      panel = panel_add(
-        panel,
-        1,
-        component_create(pos, col * TILE_SIZE + offset, row * TILE_SIZE, ALIGN_LEFT, 1, am_get_at(am, ASSET_TILE)));
+      panel =
+        panel_add(panel,
+                  1,
+                  component_create(pos, col * TILE_SIZE, row * TILE_SIZE, ALIGN_LEFT, 1, am_get_at(am, ASSET_TILE)));
     }
   }
 
@@ -344,6 +343,14 @@ static bool create_panels(struct panel **restrict panels,
   return true;
 }
 
+static void destroy_panels(struct panel **restrict panels, size_t amount) {
+  if (!panels) return;
+
+  for (size_t i = 0; i < amount; i++) {
+    panel_destroy(panels[i]);
+  }
+}
+
 struct window *create_window(struct game *restrict game, struct assets_manager *restrict am, TigrFont *restrict font) {
   if (!game || !am || !font) return NULL;
 
@@ -361,7 +368,7 @@ struct window *create_window(struct game *restrict game, struct assets_manager *
     window = window_push(window, 1, panels[i]);
   }
 
-  // sort of a hack
+  // sort of a hack. make the menu align with the navbar button
   window->panels[PANEL_MENU]->x_offset = window_x_panel(window, panels[PANEL_NAVBAR]);
   return window;
 }
@@ -448,9 +455,12 @@ static void draw_board(struct panel *restrict panel, struct game *restrict game,
       if (!cell) continue;
 
       struct component *component = panel_component_at(panel, row * board_cols(&game->board) + col);
-      if (cell->flagged) {
+      if (cell->mark == MARK_MINE) {
         component_remove(component, ASSET_FLAG);
         component_push(component, am_get(am, ASSET_FLAG));
+      } else if (cell->mark == MARK_QUESTION) {
+        component_pop(component);
+        component_push(component, am_get(am, ASSET_QUESTION));
       } else if (cell->mine && cell->revealed) {
         component_clear(component);
         component_push(component, am_get(am, ASSET_MINE));
@@ -538,7 +548,7 @@ static size_t sum_adjacent_flags(struct cell const *restrict cells, size_t row, 
   size_t adjacent_flags = 0;
   for (size_t curr_row = prev_row; curr_row <= last_row; curr_row++) {
     for (size_t curr_col = prev_col; curr_col <= last_col; curr_col++) {
-      if (cells[curr_row * cols + curr_col].flagged) adjacent_flags++;
+      if (cells[curr_row * cols + curr_col].mark == MARK_MINE) adjacent_flags++;
     }
   }
   return adjacent_flags;
@@ -557,7 +567,7 @@ static void reveal_next_cell(struct game *restrict game, unsigned row, unsigned 
 
   struct cell *current_cell = board_cell(&game->board, row, col);
   if (!current_cell) return;
-  if (current_cell->revealed || current_cell->flagged) return;
+  if (current_cell->revealed || current_cell->mark == MARK_MINE) return;
 
   board_reveal_cell(&game->board, row, col);
   if (current_cell->mine) game->state = STATE_LOST;
@@ -588,10 +598,16 @@ static int flag(struct cell *restrict cell, int mines) {
 
   if (cell->revealed) return mines;
 
-  cell->flagged = !cell->flagged;
-  if (cell->flagged) { return mines - 1; }
-
-  return mines + 1;
+  cell->mark = (cell->mark + 1) % MARK_AMOUNT;
+  switch (cell->mark) {
+    case MARK_MINE:
+      return mines - 1;
+    case MARK_QUESTION:
+      return mines + 1;
+    case MARK_NONE:
+    default:  // fallthrough
+      return mines;
+  }
 }
 
 static void react(struct window *window, struct game *restrict game, struct mouse_event mouse_event) {
@@ -616,6 +632,8 @@ static void react(struct window *window, struct game *restrict game, struct mous
 
   switch (mouse_event.button) {
     case MOUSE_LEFT:
+      if (cell->mark != MARK_NONE) break;
+
       if (cell->mine) {
         game->state = STATE_LOST;
       } else if (!cell->adjacent_mines) {
@@ -654,90 +672,94 @@ static void toggle_emoji(struct component *restrict component, struct asset *res
   component_push(component, asset);
 }
 
-struct window *on_mouse_click(struct window *restrict window,
-                              struct game *restrict game,
-                              struct assets_manager *restrict am,
-                              TigrFont *restrict font,
-                              struct mouse_event mouse_event) {
-  if (!window) { goto end; }
+void on_mouse_click(struct window *restrict window,
+                    struct game *restrict game,
+                    struct assets_manager *restrict am,
+                    TigrFont *restrict font,
+                    struct mouse_event mouse_event) {
+  if (!window) { return; }
 
-  if (!game || !am) { goto end; }
+  if (!game || !am) { return; }
 
   if (!font) font = tfont;
 
   // change the smiley when mouse button up
   if (mouse_event.button == MOUSE_NONE) {
     struct panel *stats = window_panel_at(window, PANEL_STATS);
-    if (!STATE_LOST) { goto end; }
+    if (!STATE_LOST) { return; }
 
     toggle_emoji(panel_component_at(stats, SC_BUTTON), am_get_at(am, ASSET_HAPPY));
-    goto end;
+    return;
   }
 
   // change the smiley when mouse button down
   struct panel *stats = window_panel_at(window, PANEL_STATS);
-  if (!stats) { goto end; }
+  if (!stats) { return; }
   toggle_emoji(panel_component_at(stats, SC_BUTTON), am_get_at(am, ASSET_SHOCK));
 
   // prevent mouse button hold down
-  if (game->prev_buttons != MOUSE_NONE) { goto end; }
+  if (game->prev_buttons != MOUSE_NONE) { return; }
 
   // get the components one clicked on
   struct panel *clicked_panel = window_get_panel(window, mouse_event.x, mouse_event.y);
-  if (!clicked_panel) { goto end; }
+  if (!clicked_panel) { return; }
 
   struct component *clicked_component = window_get_component(window, mouse_event.x, mouse_event.y);
-  if (!clicked_component) { goto end; }
+  if (!clicked_component) { return; }
 
-  if (clicked_panel) {
-    switch (clicked_panel->id) {
-      case PANEL_NAVBAR:
-        if (!clicked_component) { break; }
+  switch (clicked_panel->id) {
+    case PANEL_NAVBAR:
+      if (!clicked_component) { break; }
 
-        toggle_menu(window);
-        break;
-      case PANEL_BOARD:
-        react(window, game, mouse_event);
-        toggle_menu_off(window);
-        break;
-      case PANEL_STATS:
-        toggle_menu_off(window);
+      toggle_menu(window);
+      break;
+    case PANEL_BOARD:
+      react(window, game, mouse_event);
+      toggle_menu_off(window);
+      break;
+    case PANEL_STATS:
+      toggle_menu_off(window);
 
-        // reset button was clicked
-        if (clicked_component->id == SC_BUTTON) {
-          toggle_emoji(clicked_component, am_get_at(am, ASSET_HAPPY));
+      // reset button was clicked
+      if (clicked_component->id == SC_BUTTON) {
+        toggle_emoji(clicked_component, am_get_at(am, ASSET_HAPPY));
 
-          reset_board(window_panel_at(window, PANEL_BOARD), am);
-          *game = game_restart(game, game->board.difficulty);
-        }
-        break;
-      case PANEL_MENU:
-        // destroy the assets the menu consist of
-        for (size_t i = 0; i < clicked_panel->components_amount; i++) {
-          struct component *current = panel_component_at(clicked_panel, i);
-          if (!current) continue;
+        reset_board(window_panel_at(window, PANEL_BOARD), am);
+        *game = game_restart(game, game->board.difficulty);
+      }
+      break;
+    case PANEL_MENU:
+      // 'destroy' the assets the menu consist of
+      for (size_t i = 0; i < clicked_panel->components_amount; i++) {
+        struct component *current = panel_component_at(clicked_panel, i);
+        if (!current) continue;
 
-          for (size_t j = 0; j < current->size; j++) {
-            am_return(am, &current->assets[j]);
+        for (size_t j = 0; j < current->size; j++) {
+          am_return(am, &current->assets[j]);
 
 #ifdef DEBUG
 #include <stdio.h>
-            printf("asset: {id: %s, ref_count: %d}\n",
-                   current->assets[j].id == ASSET_EMPTY ? "empty" : "?",
-                   current->assets[j].ref_count);
+          printf("asset: {id: %s, ref_count: %d}\n",
+                 current->assets[j].id == ASSET_EMPTY ? "empty" : "?",
+                 current->assets[j].ref_count);
 #endif
-          }
         }
+      }
 
-        *game = game_restart(game, clicked_component->id);
-        window_destroy(window);
-        window = create_window(game, am, font);
+      // change the game difficulty
+      *game = game_restart(game, clicked_component->id);
 
-        break;
-    }
+      // recreate all the panels to accommodate the above change
+      destroy_panels(window->panels, window->panels_amount);
+      if (!create_panels(window->panels, PANEL_AMOUNT, am, game, font)) {
+        game->state = STATE_INVALID;
+        return;
+      }
+
+      // sort of a hack. make the menu align with the navbar button
+      window->panels[PANEL_MENU]->x_offset = window_x_panel(window, window->panels[PANEL_NAVBAR]);
+      break;
   }
-end:
-  return window;
 }
 
 void on_mouse_hover(struct window *restrict window,

@@ -23,11 +23,11 @@ void draw_window(struct window *restrict window,
                  struct assets_manager *restrict am,
                  TigrFont *restrict font);
 
-struct window *on_mouse_click(struct window *restrict window,
-                              struct game *restrict game,
-                              struct assets_manager *restrict am,
-                              TigrFont *restrict font,
-                              struct mouse_event mouse_event);
+void on_mouse_click(struct window *restrict window,
+                    struct game *restrict game,
+                    struct assets_manager *restrict am,
+                    TigrFont *restrict font,
+                    struct mouse_event mouse_event);
 
 void on_mouse_hover(struct window *restrict window,
                     struct game *restrict game,
