@@ -18,10 +18,22 @@ target_compile_features(minesweeper PRIVATE c_std_99)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_compile_options(minesweeper PRIVATE 
+    -O3
     -Wall 
     -Wextra 
     -Wpedantic 
   )
+
+  if(DEBUG)
+    target_compile_options(minesweeper PRIVATE
+      -g
+      -Og
+      -fsanitize=address,undefined
+    )
+    target_link_options(minesweeper PRIVATE
+      -fsanitize=address,undefined
+    )
+  endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   target_compile_definitions(minesweeper PRIVATE _CRT_SECURE_NO_WARNINGS)
   target_compile_options(minesweeper PRIVATE 

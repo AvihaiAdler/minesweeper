@@ -10,6 +10,7 @@ target_compile_features(board PRIVATE c_std_99)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_compile_options(board PRIVATE
+    -O3
     -Wall
     -Wextra
     -Wpedantic

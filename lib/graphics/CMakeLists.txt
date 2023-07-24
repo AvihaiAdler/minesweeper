@@ -26,10 +26,21 @@ endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_compile_options(graphics PRIVATE
+    -O3
     -Wall
     -Wextra
     -Wpedantic
   )
+  if(DEBUG)
+  target_compile_options(graphics PRIVATE
+    -g
+    -Og
+    -fsanitize=address,undefined
+  )
+  target_link_options(graphics PRIVATE
+    -fsanitize=address,undefined
+  )
+endif()
 elseif()
   target_compile_options(graphics PRIVATE
     -W4
