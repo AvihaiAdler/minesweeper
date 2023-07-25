@@ -455,18 +455,18 @@ static void draw_board(struct panel *restrict panel, struct game *restrict game,
       if (!cell) continue;
 
       struct component *component = panel_component_at(panel, row * board_cols(&game->board) + col);
-      if (cell->mark == MARK_MINE) {
+      if (cell->mark == MARK_MINE) {  // cells marked as mines should not be revealed
         component_remove(component, ASSET_FLAG);
         component_push(component, am_get(am, ASSET_FLAG));
-      } else if (cell->mark == MARK_QUESTION) {
-        component_pop(component);
-        component_push(component, am_get(am, ASSET_QUESTION));
       } else if (cell->mine && cell->revealed) {
         component_clear(component);
         component_push(component, am_get(am, ASSET_MINE));
       } else if (cell->revealed) {
         component_clear(component);
         component_push(component, am_get(am, ASSET_ZERO + cell->adjacent_mines));
+      } else if (cell->mark == MARK_QUESTION) {
+        component_pop(component);
+        component_push(component, am_get(am, ASSET_QUESTION));
       } else {
         component_clear(component);
         component_push(component, am_get(am, ASSET_TILE));
