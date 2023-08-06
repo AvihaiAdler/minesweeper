@@ -4,6 +4,11 @@ target_sources(tigr PRIVATE
   tigr.c
 )
 
+target_compile_options(tigr PRIVATE
+  $<$<COMPILE_LANG_AND_ID:C,Clang,GNU>: -Wall -Wextra -Wpedantic -O3 -g>
+  $<$<COMPILE_LANG_AND_ID:C,MSVC>:-W4>
+)
+
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   find_library(GLU
     NAMES GLU
@@ -20,12 +25,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     REQUIRED
   )
 
-  target_compile_options(tigr PRIVATE
-    -Wall
-    -Wextra
-    -pedantic
-  )
-
   target_link_libraries(tigr PUBLIC
     ${GLU}
     ${X11}
@@ -37,10 +36,6 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   target_link_libraries(tigr PUBLIC
     ${OPENGL_LIBRARIES}
     gdi32
-  )
-
-  target_compile_options(tigr PRIVATE
-    -W4
   )
 else()
   message("unsupported system")

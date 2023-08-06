@@ -1,8 +1,7 @@
-.vscode/*
-.vs/*
-out/*
+.*/
+out/
 CMakeSettings.json
-minesweeper/*
-build/*
+minesweeper*/
+build/
 notes
 *_old.*

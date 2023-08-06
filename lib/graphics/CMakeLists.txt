@@ -20,31 +20,23 @@ target_link_libraries(graphics PUBLIC
 )
 
 option(DEBUG "debug" OFF)
+
 if(DEBUG)
   target_compile_definitions(graphics PRIVATE DEBUG)
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+target_compile_options(graphics PRIVATE
+  $<$<COMPILE_LANG_AND_ID:C,Clang,GNU>: -Wall -Wextra -Wpedantic -O3 -g>
+  $<$<COMPILE_LANG_AND_ID:C,MSVC>:-W4>
+)
+
+if(DEBUG)
   target_compile_options(graphics PRIVATE
-    -O3
-    -Wall
-    -Wextra
-    -Wpedantic
-  )
-  if(DEBUG)
-  target_compile_options(graphics PRIVATE
-    -g
-    -Og
-    -fsanitize=address,undefined
+    $<$<COMPILE_LANG_AND_ID:C,Clang,GNU>: -fsanitize=address,undefined>
+    $<$<COMPILE_LANG_AND_ID:C,MSVC>:-fsanitize=address>
   )
   target_link_options(graphics PRIVATE
-    -fsanitize=address,undefined
+    $<$<COMPILE_LANG_AND_ID:C,Clang,GNU>: -fsanitize=address,undefined>
+    $<$<COMPILE_LANG_AND_ID:C,MSVC>:-fsanitize=address>
   )
-endif()
-elseif()
-  target_compile_options(graphics PRIVATE
-    -W4
-  )
-else()
-  message("unsupported system")
 endif()
