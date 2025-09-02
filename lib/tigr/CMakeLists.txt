@@ -1,12 +1,14 @@
 add_library(tigr STATIC)
 
-target_sources(tigr PRIVATE
-  tigr.c
+target_sources(tigr 
+  PRIVATE
+    tigr.c
 )
 
-target_compile_options(tigr PRIVATE
-  $<$<COMPILE_LANG_AND_ID:C,Clang,GNU>: -Wall -Wextra -Wpedantic -O3 -g>
-  $<$<COMPILE_LANG_AND_ID:C,MSVC>:-W4>
+target_compile_options(tigr 
+  PRIVATE
+    $<$<COMPILE_LANG_AND_ID:C,Clang,GNU>: -Wall -Wextra -Wpedantic -O3>
+    $<$<COMPILE_LANG_AND_ID:C,MSVC>:-W3>
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -25,17 +27,19 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     REQUIRED
   )
 
-  target_link_libraries(tigr PUBLIC
-    ${GLU}
-    ${X11}
-    ${GL}
+  target_link_libraries(tigr 
+    PUBLIC
+      ${GLU}
+      ${X11}
+      ${GL}
   )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
   find_package(OpenGL REQUIRED)
 
-  target_link_libraries(tigr PUBLIC
-    ${OPENGL_LIBRARIES}
-    gdi32
+  target_link_libraries(tigr 
+    PUBLIC
+      ${OPENGL_LIBRARIES}
+      gdi32
   )
 else()
   message("unsupported system")
