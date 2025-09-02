@@ -17,6 +17,6 @@ target_compile_features(board
 
 target_compile_options(board 
   PRIVATE
-    $<$<COMPILE_LANG_AND_ID:C,Clang,GNU>: -Wall -Wextra -Wpedantic -O3>
+    "$<$<COMPILE_LANG_AND_ID:C,Clang,GNU>:-Wall;-Wextra;-Wpedantic;-O3>"
     $<$<COMPILE_LANG_AND_ID:C,MSVC>:-W4>
 )

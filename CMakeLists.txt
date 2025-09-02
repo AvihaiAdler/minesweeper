@@ -28,19 +28,19 @@ target_compile_definitions(minesweeper
 
 target_compile_options(minesweeper 
   PRIVATE
-    $<$<COMPILE_LANG_AND_ID:C,Clang,GNU>: -Wall -Wextra -Wpedantic>
+    "$<$<COMPILE_LANG_AND_ID:C,Clang,GNU>:-Wall;-Wextra;-Wpedantic>"
     $<$<COMPILE_LANG_AND_ID:C,MSVC>:-W3>
 )
 
 target_compile_options(minesweeper 
   PRIVATE
-    $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,Clang,GNU>>: -g -fsanitize=address,undefined>
+    "$<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,Clang,GNU>>:-g;-fsanitize=address,undefined>"
     $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,MSVC>>:-fsanitize=address>
 )
 
 target_link_options(minesweeper 
   PRIVATE
-    $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,Clang,GNU>>: -g -fsanitize=address,undefined>
+    "$<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,Clang,GNU>>:-g;-fsanitize=address,undefined>"
     $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,MSVC>>:-fsanitize=address>
 )
 

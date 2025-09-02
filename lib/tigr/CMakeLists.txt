@@ -7,7 +7,7 @@ target_sources(tigr
 
 target_compile_options(tigr 
   PRIVATE
-    $<$<COMPILE_LANG_AND_ID:C,Clang,GNU>: -Wall -Wextra -Wpedantic -O3>
+    "$<$<COMPILE_LANG_AND_ID:C,Clang,GNU>:-Wall;-Wextra;-Wpedantic;-O3>"
     $<$<COMPILE_LANG_AND_ID:C,MSVC>:-W3>
 )
 

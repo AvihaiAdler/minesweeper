@@ -33,18 +33,18 @@ target_compile_definitions(graphics
 
 target_compile_options(graphics 
   PRIVATE
-    $<$<COMPILE_LANG_AND_ID:C,Clang,GNU>: -Wall -Wextra -Wpedantic -O3>
+    "$<$<COMPILE_LANG_AND_ID:C,Clang,GNU>:-Wall;-Wextra;-Wpedantic;-O3>"
     $<$<COMPILE_LANG_AND_ID:C,MSVC>:-W3>
 )
 
 target_compile_options(graphics 
   PRIVATE
-    $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,Clang,GNU>>: -g -fsanitize=address,undefined>
+    "$<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,Clang,GNU>>:-g;-fsanitize=address,undefined>"
     $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,MSVC>>:-fsanitize=address>
 )
 
 target_link_options(graphics 
   PRIVATE
-    $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,Clang,GNU>>: -g -fsanitize=address,undefined>
+    "$<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,Clang,GNU>>:-g;-fsanitize=address,undefined>"
     $<$<AND:$<CONFIG:Debug>,$<COMPILE_LANG_AND_ID:C,MSVC>>:-fsanitize=address>
 )
