@@ -62,12 +62,11 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/lib/tigr)
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/graphics)
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/board)
 
-add_custom_command(TARGET minesweeper
-  POST_BUILD
-    COMMAND 
-      ${CMAKE_COMMAND} ARGS -E make_directory ${CMAKE_SOURCE_DIR}/minesweeper
-    COMMAND 
-      ${CMAKE_COMMAND} ARGS -E copy $<TARGET_FILE:minesweeper> ${CMAKE_SOURCE_DIR}/minesweeper
-    COMMAND 
-      ${CMAKE_COMMAND} ARGS -E copy_directory_if_different ${CMAKE_SOURCE_DIR}/resources ${CMAKE_SOURCE_DIR}/minesweeper/resources
+install(TARGETS minesweeper
+  RUNTIME
+    DESTINATION ${CMAKE_SOURCE_DIR}/bin
+)
+
+install(DIRECTORY resources
+    DESTINATION ${CMAKE_SOURCE_DIR}/bin
 )

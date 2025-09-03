@@ -27,7 +27,8 @@ The game uses CMake as its build tool. As such one need it to be installed.
 - navigate to the project directory
 - `cmake -S . -B build` (add `-G <generator>` if you prefer to use anything other than `make`)
 - `cmake --build build` to build the project
-- the game and all its files will be under `minesweeper/`
+- `cmake --install build` to extract the binary and its assets 
+- the game and all its files will be under `bin/`
 
 
 #### RoadMap

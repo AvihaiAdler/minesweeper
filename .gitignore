@@ -3,5 +3,6 @@ out/
 CMakeSettings.json
 minesweeper*/
 build/
+bin/
 notes
 *_old.*
